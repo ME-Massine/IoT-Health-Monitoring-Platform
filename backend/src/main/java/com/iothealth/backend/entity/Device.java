@@ -23,7 +23,7 @@ public class Device {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "device_code", nullable = false, length = 50, unique = true)
+    @Column(name = "device_code", nullable = false, length = 50)
     private String deviceCode;
 
     @Column(nullable = false, length = 100)
