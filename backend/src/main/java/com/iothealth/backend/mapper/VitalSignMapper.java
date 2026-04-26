@@ -5,6 +5,9 @@ import com.iothealth.backend.dto.vitalsign.VitalSignResponse;
 import com.iothealth.backend.entity.Device;
 import com.iothealth.backend.entity.Patient;
 import com.iothealth.backend.entity.VitalSign;
+import com.iothealth.backend.exception.BadRequestException;
+
+import java.time.Instant;
 
 public final class VitalSignMapper {
 
@@ -14,13 +17,17 @@ public final class VitalSignMapper {
     public static VitalSign toEntity(VitalSignRequest request, Device device) {
         Patient patient = device.getPatient();
 
+        if (patient == null) {
+            throw new BadRequestException("Device is not assigned to a patient: deviceCode=" + device.getDeviceCode());
+        }
+
         return VitalSign.builder()
                 .device(device)
                 .patient(patient)
                 .heartRate(request.heartRate())
                 .temperature(request.temperature())
                 .spo2(request.spo2())
-                .recordedAt(request.recordedAt())
+                .recordedAt(request.recordedAt() != null ? request.recordedAt() : Instant.now())
                 .build();
     }
 
