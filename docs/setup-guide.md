@@ -25,15 +25,35 @@ cd IoT-Health-Monitoring-Platform
 
 ### Create the PostgreSQL Database
 
-First, create the necessary database in PostgreSQL:
+First, create the required PostgreSQL database:
 
 ```sql
 CREATE DATABASE iot_health_db;
 ```
 
-### Default Backend Configuration
+### Configure the Backend
 
-The backend application's database connection details are configured as follows:
+The repository includes an example configuration file:
+
+`backend/src/main/resources/application.example.yml`
+
+Create your local configuration file by copying it:
+
+```bash
+cp backend/src/main/resources/application.example.yml backend/src/main/resources/application.yml
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item backend/src/main/resources/application.example.yml backend/src/main/resources/application.yml
+```
+
+Then open:
+
+`backend/src/main/resources/application.yml`
+
+Update the PostgreSQL password:
 
 ```yaml
 spring:
@@ -42,8 +62,6 @@ spring:
     username: postgres
     password: your_password
 ```
-
-**Action Required**: Update the `backend/src/main/resources/application.yml` file with your local PostgreSQL password.
 
 ## 4. Run the Backend
 
@@ -56,8 +74,14 @@ mvn spring-boot:run
 
 For Windows users, use the following command:
 
-```bash
+```powershell
 .\mvnw.cmd spring-boot:run
+```
+
+Alternatively, you can run the tests to verify the backend:
+
+```powershell
+.\mvnw.cmd clean test
 ```
 
 ## 5. Test the Health Check Endpoint

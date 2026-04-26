@@ -35,10 +35,15 @@ venv/
 # =====================
 .env
 .env.local
-application-local.properties
+
+# Spring Boot local configuration
+backend/src/main/resources/application.yml
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.properties
 
 # =====================
 # OS
 # =====================
 .DS_Store
 Thumbs.db
+
