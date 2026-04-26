@@ -28,8 +28,8 @@ public final class DeviceMapper {
                 device.getDeviceCode(),
                 device.getType(),
                 device.getStatus(),
-                patient.getId(),
-                patient.getFirstName() + " " + patient.getLastName(),
+                patient != null ? patient.getId() : null,
+                formatPatientFullName(patient),
                 device.getCreatedAt(),
                 device.getUpdatedAt()
         );
@@ -44,5 +44,18 @@ public final class DeviceMapper {
 
     private static DeviceStatus resolveStatus(DeviceStatus status) {
         return status != null ? status : DeviceStatus.ACTIVE;
+    }
+
+    private static String formatPatientFullName(Patient patient) {
+        if (patient == null) {
+            return null;
+        }
+
+        String firstName = patient.getFirstName() != null ? patient.getFirstName().trim() : "";
+        String lastName = patient.getLastName() != null ? patient.getLastName().trim() : "";
+
+        String fullName = (firstName + " " + lastName).trim();
+
+        return fullName.isBlank() ? null : fullName;
     }
 }
