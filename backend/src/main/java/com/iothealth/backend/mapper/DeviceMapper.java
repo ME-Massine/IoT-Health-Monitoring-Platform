@@ -38,7 +38,11 @@ public final class DeviceMapper {
     public static void updateEntity(Device device, DeviceRequest request, Patient patient) {
         device.setDeviceCode(request.deviceCode());
         device.setType(request.type());
-        device.setStatus(resolveStatus(request.status()));
+
+        if (request.status() != null) {
+            device.setStatus(request.status());
+        }
+
         device.setPatient(patient);
     }
 
