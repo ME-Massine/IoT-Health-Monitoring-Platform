@@ -1,4 +1,4 @@
-package com.iothealth.backend.dto.mapper;
+package com.iothealth.backend.mapper;
 
 import com.iothealth.backend.dto.patient.PatientRequest;
 import com.iothealth.backend.dto.patient.PatientResponse;
