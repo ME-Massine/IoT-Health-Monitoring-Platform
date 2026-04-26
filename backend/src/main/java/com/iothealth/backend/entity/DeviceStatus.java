@@ -1,4 +1,7 @@
 package com.iothealth.backend.entity;
 
-public class DeviceStatus {
+public enum DeviceStatus {
+    ACTIVE,
+    INACTIVE,
+    MAINTENANCE
 }
