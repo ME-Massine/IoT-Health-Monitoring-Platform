@@ -37,6 +37,7 @@ public class VitalSign {
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -50,10 +51,12 @@ public class VitalSign {
 
     @PrePersist
     protected void onCreate() {
+        Instant now = Instant.now();
+
         if (this.recordedAt == null) {
-            this.recordedAt = Instant.now();
+            this.recordedAt = now;
         }
 
-        this.createdAt = Instant.now();
+        this.createdAt = now;
     }
 }
