@@ -31,4 +31,14 @@ public class VitalSignService {
 
         return VitalSignMapper.toResponse(savedVitalSign);
     }
+
+    @Transactional(readOnly = true)
+    public VitalSignResponse getLatestVitalSignByPatientId(Long patientId) {
+        VitalSign vitalSign = vitalSignRepository.findTopByPatientIdOrderByRecordedAtDesc(patientId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No vital sign readings found for patient id: " + patientId
+                ));
+
+        return VitalSignMapper.toResponse(vitalSign);
+    }
 }

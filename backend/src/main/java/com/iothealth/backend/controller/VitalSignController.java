@@ -20,4 +20,9 @@ public class VitalSignController {
     public VitalSignResponse ingestVitalSign(@Valid @RequestBody VitalSignRequest request) {
         return vitalSignService.ingestVitalSign(request);
     }
+
+    @GetMapping("/patient/{patientId}/latest")
+    public VitalSignResponse getLatestVitalSignByPatientId(@PathVariable Long patientId) {
+        return vitalSignService.getLatestVitalSignByPatientId(patientId);
+    }
 }
