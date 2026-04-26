@@ -4,6 +4,7 @@ import com.iothealth.backend.dto.vitalsign.VitalSignRequest;
 import com.iothealth.backend.dto.vitalsign.VitalSignResponse;
 import com.iothealth.backend.entity.Device;
 import com.iothealth.backend.entity.VitalSign;
+import com.iothealth.backend.exception.BadRequestException;
 import com.iothealth.backend.exception.ResourceNotFoundException;
 import com.iothealth.backend.mapper.VitalSignMapper;
 import com.iothealth.backend.repository.DeviceRepository;
@@ -11,6 +12,9 @@ import com.iothealth.backend.repository.VitalSignRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -41,4 +45,37 @@ public class VitalSignService {
 
         return VitalSignMapper.toResponse(vitalSign);
     }
+
+    @Transactional(readOnly = true)
+    public List<VitalSignResponse> getVitalSignHistoryByPatientId(
+            Long patientId,
+            Instant from,
+            Instant to
+    ) {
+        if ((from == null && to != null) || (from != null && to == null)) {
+            throw new BadRequestException("Both 'from' and 'to' timestamps must be provided together");
+        }
+
+        List<VitalSign> vitalSigns;
+
+        if (from != null) {
+            if (from.isAfter(to)) {
+                throw new BadRequestException("'from' timestamp must be before 'to' timestamp");
+            }
+
+            vitalSigns = vitalSignRepository.findByPatientIdAndRecordedAtBetweenOrderByRecordedAtDesc(
+                    patientId,
+                    from,
+                    to
+            );
+        } else {
+            vitalSigns = vitalSignRepository.findByPatientIdOrderByRecordedAtDesc(patientId);
+        }
+
+        return vitalSigns.stream()
+                .map(VitalSignMapper::toResponse)
+                .toList();
+    }
+
+
 }
