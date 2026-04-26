@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: iot-health-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/iot_health_db
+    username: postgres
+    password: your_password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
