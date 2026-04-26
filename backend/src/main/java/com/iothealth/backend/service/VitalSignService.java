@@ -12,6 +12,8 @@ import com.iothealth.backend.repository.VitalSignRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -50,31 +52,44 @@ public class VitalSignService {
     public List<VitalSignResponse> getVitalSignHistoryByPatientId(
             Long patientId,
             Instant from,
-            Instant to
+            Instant to,
+            int limit
     ) {
         if ((from == null && to != null) || (from != null && to == null)) {
             throw new BadRequestException("Both 'from' and 'to' timestamps must be provided together");
         }
 
+        if (from != null && from.isAfter(to)) {
+            throw new BadRequestException("'from' timestamp must be before 'to' timestamp");
+        }
+
+        int sanitizedLimit = sanitizeLimit(limit);
+        Pageable pageable = PageRequest.of(0, sanitizedLimit);
+
         List<VitalSign> vitalSigns;
 
         if (from != null) {
-            if (from.isAfter(to)) {
-                throw new BadRequestException("'from' timestamp must be before 'to' timestamp");
-            }
-
             vitalSigns = vitalSignRepository.findByPatientIdAndRecordedAtBetweenOrderByRecordedAtDesc(
                     patientId,
                     from,
-                    to
+                    to,
+                    pageable
             );
         } else {
-            vitalSigns = vitalSignRepository.findByPatientIdOrderByRecordedAtDesc(patientId);
+            vitalSigns = vitalSignRepository.findByPatientIdOrderByRecordedAtDesc(patientId, pageable);
         }
 
         return vitalSigns.stream()
                 .map(VitalSignMapper::toResponse)
                 .toList();
+    }
+
+    private int sanitizeLimit(int limit) {
+        if (limit < 1) {
+            throw new BadRequestException("'limit' must be greater than 0");
+        }
+
+        return Math.min(limit, 500);
     }
 
 
