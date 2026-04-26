@@ -102,7 +102,7 @@ public class DeviceService {
 
     private void validatePatientHasNoDevice(Long patientId) {
         if (deviceRepository.existsByPatientId(patientId)) {
-            throw new BadRequestException("Patient already has an assigned device with id: " + patientId);
+            throw new BadRequestException("Patient already has an assigned device: patientId=" + patientId);
         }
     }
 }
