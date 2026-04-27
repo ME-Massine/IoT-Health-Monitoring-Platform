@@ -10,6 +10,9 @@ import com.iothealth.backend.repository.AlertRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.iothealth.backend.dto.alert.AlertResponse;
+import com.iothealth.backend.exception.ResourceNotFoundException;
+import com.iothealth.backend.mapper.AlertMapper;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -137,6 +140,41 @@ public class AlertService {
                     "Warning low SpO2 detected: " + spo2 + "%"
             ));
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<AlertResponse> getAllAlerts() {
+        return alertRepository.findAll()
+                .stream()
+                .map(AlertMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AlertResponse> getUnresolvedAlerts() {
+        return alertRepository.findByResolvedFalseOrderByCreatedAtDesc()
+                .stream()
+                .map(AlertMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AlertResponse> getAlertsByPatientId(Long patientId) {
+        return alertRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+                .stream()
+                .map(AlertMapper::toResponse)
+                .toList();
+    }
+
+    public AlertResponse resolveAlert(Long id) {
+        Alert alert = alertRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Alert not found with id: " + id));
+
+        alert.resolve();
+
+        Alert savedAlert = alertRepository.save(alert);
+
+        return AlertMapper.toResponse(savedAlert);
     }
 
     private Alert buildAlert(
