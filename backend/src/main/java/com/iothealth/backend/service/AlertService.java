@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.iothealth.backend.dto.alert.AlertResponse;
 import com.iothealth.backend.exception.ResourceNotFoundException;
 import com.iothealth.backend.mapper.AlertMapper;
+import com.iothealth.backend.websocket.AlertWebSocketPublisher;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -36,6 +37,8 @@ public class AlertService {
     private static final int LOW_SPO2_CRITICAL = 92;
 
     private final AlertRepository alertRepository;
+    private final AlertWebSocketPublisher alertWebSocketPublisher;
+
 
     public List<Alert> detectAndCreateAlerts(VitalSign vitalSign) {
         List<Alert> alerts = detectAlerts(vitalSign);
@@ -44,7 +47,13 @@ public class AlertService {
             return List.of();
         }
 
-        return alertRepository.saveAll(alerts);
+        List<Alert> savedAlerts = alertRepository.saveAll(alerts);
+
+        savedAlerts.stream()
+                .map(AlertMapper::toResponse)
+                .forEach(alertWebSocketPublisher::publishAlert);
+
+        return savedAlerts;
     }
 
     private List<Alert> detectAlerts(VitalSign vitalSign) {
