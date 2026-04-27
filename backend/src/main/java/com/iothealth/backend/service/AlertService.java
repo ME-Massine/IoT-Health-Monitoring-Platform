@@ -122,7 +122,7 @@ public class AlertService {
             return;
         }
 
-        if (spo2 < LOW_SPO2_CRITICAL) {
+        if (spo2 <= LOW_SPO2_CRITICAL) {
             alerts.add(buildAlert(
                     vitalSign,
                     AlertType.LOW_SPO2,
