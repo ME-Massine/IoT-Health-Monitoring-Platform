@@ -8,6 +8,7 @@ import com.iothealth.backend.entity.Patient;
 import com.iothealth.backend.entity.VitalSign;
 import com.iothealth.backend.repository.AlertRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.iothealth.backend.dto.alert.AlertResponse;
@@ -144,7 +145,7 @@ public class AlertService {
 
     @Transactional(readOnly = true)
     public List<AlertResponse> getAllAlerts() {
-        return alertRepository.findAll()
+        return alertRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(AlertMapper::toResponse)
                 .toList();
@@ -166,6 +167,7 @@ public class AlertService {
                 .toList();
     }
 
+    @Transactional
     public AlertResponse resolveAlert(Long id) {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Alert not found with id: " + id));
