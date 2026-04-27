@@ -214,3 +214,10 @@ management:
       exposure:
         include: health,info
 ```
+
+```markdown
+## Documentation
+
+- [Setup Guide](docs/setup-guide.md)
+- [WebSocket Topics](docs/websocket-topics.md)
+```
