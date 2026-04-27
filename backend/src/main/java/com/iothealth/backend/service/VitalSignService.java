@@ -25,6 +25,7 @@ public class VitalSignService {
 
     private final VitalSignRepository vitalSignRepository;
     private final DeviceRepository deviceRepository;
+    private final AlertService alertService;
 
     public VitalSignResponse ingestVitalSign(VitalSignRequest request) {
         Device device = deviceRepository.findByDeviceCode(request.deviceCode())
@@ -34,6 +35,8 @@ public class VitalSignService {
 
         VitalSign vitalSign = VitalSignMapper.toEntity(request, device);
         VitalSign savedVitalSign = vitalSignRepository.save(vitalSign);
+
+        alertService.detectAndCreateAlerts(savedVitalSign);
 
         return VitalSignMapper.toResponse(savedVitalSign);
     }
