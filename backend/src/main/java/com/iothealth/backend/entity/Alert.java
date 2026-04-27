@@ -11,7 +11,9 @@ import java.time.Instant;
         indexes = {
                 @Index(name = "idx_alerts_patient_created_at", columnList = "patient_id, created_at"),
                 @Index(name = "idx_alerts_resolved_created_at", columnList = "resolved, created_at"),
-                @Index(name = "idx_alerts_severity_created_at", columnList = "severity, created_at")
+                @Index(name = "idx_alerts_severity_created_at", columnList = "severity, created_at"),
+                @Index(name = "idx_alerts_type_created_at", columnList = "type, created_at"),
+                @Index(name = "idx_alerts_vital_sign_created_at", columnList = "vital_sign_id, created_at")
         }
 )
 @Getter
@@ -37,7 +39,7 @@ public class Alert {
     private String message;
 
     @Column(nullable = false)
-    private Boolean resolved;
+    private boolean resolved;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Setter(AccessLevel.NONE)
@@ -61,14 +63,10 @@ public class Alert {
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
-
-        if (this.resolved == null) {
-            this.resolved = false;
-        }
     }
 
     public void resolve() {
-        if (!Boolean.TRUE.equals(this.resolved)) {
+        if (!this.resolved) {
             this.resolved = true;
             this.resolvedAt = Instant.now();
         }
