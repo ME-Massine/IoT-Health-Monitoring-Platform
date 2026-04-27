@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import com.iothealth.backend.websocket.VitalSignWebSocketPublisher;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +27,7 @@ public class VitalSignService {
     private final VitalSignRepository vitalSignRepository;
     private final DeviceRepository deviceRepository;
     private final AlertService alertService;
+    private final VitalSignWebSocketPublisher vitalSignWebSocketPublisher;
 
     public VitalSignResponse ingestVitalSign(VitalSignRequest request) {
         Device device = deviceRepository.findByDeviceCode(request.deviceCode())
@@ -38,7 +40,10 @@ public class VitalSignService {
 
         alertService.detectAndCreateAlerts(savedVitalSign);
 
-        return VitalSignMapper.toResponse(savedVitalSign);
+        VitalSignResponse response = VitalSignMapper.toResponse(savedVitalSign);
+        vitalSignWebSocketPublisher.publishVitalSign(response);
+
+        return response;
     }
 
     @Transactional(readOnly = true)
