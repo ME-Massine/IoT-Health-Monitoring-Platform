@@ -47,3 +47,9 @@ backend/src/main/resources/application-local.properties
 .DS_Store
 Thumbs.db
 
+
+# =====================
+# Front-end local configuration
+# =====================
+frontend/node_modules/
+frontend/.env.local
