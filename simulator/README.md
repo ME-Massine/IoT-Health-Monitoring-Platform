@@ -22,12 +22,22 @@ Edit `.env` to match your device code and desired interval.
 
 ## Configuration
 
-| Variable           | Default                        | Description                              |
-|--------------------|--------------------------------|------------------------------------------|
-| `API_BASE_URL`     | `http://localhost:8080/api/v1` | Backend API base URL                     |
-| `DEVICE_CODE`      | `DEV-001`                      | Device code registered in the DB         |
-| `INTERVAL_SECONDS` | `5`                            | Seconds between each reading             |
-| `ANOMALY_RATE`     | `0.10`                         | Fraction of readings that are anomalous (0.0–1.0) |
+| Variable           | Default                        | Description                                        |
+|--------------------|--------------------------------|----------------------------------------------------|
+| `API_BASE_URL`     | `http://localhost:8080/api/v1` | Backend API base URL                               |
+| `DEVICE_CODES`     | `DEV-001`                      | Comma-separated list of registered device codes    |
+| `INTERVAL_SECONDS` | `5`                            | Seconds between each tick (all devices send per tick) |
+| `ANOMALY_RATE`     | `0.10`                         | Fraction of readings that are anomalous (0.0–1.0)  |
+
+### Multiple devices example
+
+```env
+DEVICE_CODES=DEV-001,DEV-002,DEV-003
+```
+
+Each device has its own independent vital state and drifts separately.
+At startup, the simulator validates every configured device code against the backend.
+Invalid or unknown codes are skipped with a warning. If all codes fail, the simulator exits.
 
 ## Anomaly types
 
