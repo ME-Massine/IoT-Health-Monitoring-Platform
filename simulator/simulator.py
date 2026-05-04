@@ -9,12 +9,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080/api/v1")
-DEVICE_CODE = os.getenv("DEVICE_CODE", "DEV-001")
-INTERVAL_SECONDS = int(os.getenv("INTERVAL_SECONDS", "5"))
-ANOMALY_RATE = float(os.getenv("ANOMALY_RATE", "0.10"))
+API_BASE_URL      = os.getenv("API_BASE_URL", "http://localhost:8080/api/v1")
+DEVICE_CODES_RAW  = os.getenv("DEVICE_CODES", os.getenv("DEVICE_CODE", "DEV-001"))
+INTERVAL_SECONDS  = int(os.getenv("INTERVAL_SECONDS", "5"))
+ANOMALY_RATE      = float(os.getenv("ANOMALY_RATE", "0.10"))
 
-VITALS_ENDPOINT = f"{API_BASE_URL}/vitals"
+VITALS_ENDPOINT   = f"{API_BASE_URL}/vitals"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,11 +26,11 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Backend alert thresholds (must match AlertService.java constants)
 # ---------------------------------------------------------------------------
-HR_CRITICAL_LOW  = 50
-HR_NORMAL_LOW    = 60
-HR_NORMAL_HIGH   = 100
-HR_WARNING_HIGH  = 110
-HR_CRITICAL_HIGH = 120
+HR_CRITICAL_LOW   = 50
+HR_NORMAL_LOW     = 60
+HR_NORMAL_HIGH    = 100
+HR_WARNING_HIGH   = 110
+HR_CRITICAL_HIGH  = 120
 
 TEMP_CRITICAL_LOW  = 35.0
 TEMP_NORMAL_LOW    = 36.1
@@ -39,22 +39,22 @@ TEMP_WARNING_HIGH  = 37.8
 TEMP_CRITICAL_HIGH = 38.0
 
 SPO2_NORMAL_LOW   = 95
-SPO2_WARNING_LOW  = 94   # <= triggers WARNING
-SPO2_CRITICAL_LOW = 92   # <= triggers CRITICAL
+SPO2_WARNING_LOW  = 94
+SPO2_CRITICAL_LOW = 92
 
 
 # ---------------------------------------------------------------------------
-# State — tracks current "baseline" so values drift gradually
+# Per-device vital state — each device drifts independently
 # ---------------------------------------------------------------------------
 class VitalState:
-    def __init__(self):
+    def __init__(self, device_code: str):
+        self.device_code = device_code
         self.heart_rate  = float(random.randint(65, 85))
         self.temperature = round(random.uniform(36.3, 37.0), 1)
         self.spo2        = float(random.randint(96, 99))
 
     def drift(self):
-        """Apply a small random walk to each vital sign."""
-        self.heart_rate  = self._clamp(self.heart_rate  + random.uniform(-2, 2),  HR_NORMAL_LOW,   HR_NORMAL_HIGH)
+        self.heart_rate  = self._clamp(self.heart_rate  + random.uniform(-2, 2),    HR_NORMAL_LOW,   HR_NORMAL_HIGH)
         self.temperature = self._clamp(self.temperature + random.uniform(-0.1, 0.1), TEMP_NORMAL_LOW, TEMP_NORMAL_HIGH)
         self.spo2        = self._clamp(self.spo2        + random.uniform(-0.5, 0.5), SPO2_NORMAL_LOW, 100.0)
 
@@ -63,19 +63,10 @@ class VitalState:
         return max(lo, min(hi, value))
 
 
+# ---------------------------------------------------------------------------
+# Anomaly generation
+# ---------------------------------------------------------------------------
 def pick_anomaly() -> dict:
-    """
-    Return a set of vital signs that will trigger at least one backend alert.
-    Anomaly types and their correlations:
-      - high_hr_warning  : HR warning, slight temp rise
-      - high_hr_critical : HR critical, slight temp rise
-      - low_hr_critical  : HR critical low
-      - fever_warning    : Temp warning, HR slightly elevated
-      - fever_critical   : Temp critical, HR elevated
-      - hypothermia      : Temp critical low
-      - spo2_warning     : SpO2 warning, HR slightly elevated
-      - spo2_critical    : SpO2 critical, HR elevated
-    """
     anomaly = random.choice([
         "high_hr_warning",
         "high_hr_critical",
@@ -87,55 +78,46 @@ def pick_anomaly() -> dict:
         "spo2_critical",
     ])
 
-    # Defaults — will be overridden per anomaly
     hr   = random.randint(65, 85)
     temp = round(random.uniform(36.3, 37.0), 1)
     spo2 = random.randint(96, 99)
 
     if anomaly == "high_hr_warning":
-        hr   = random.randint(HR_WARNING_HIGH, HR_CRITICAL_HIGH)      # 110–120
-        temp = round(random.uniform(37.2, 37.7), 1)                   # slightly warm
-
+        hr   = random.randint(HR_WARNING_HIGH, HR_CRITICAL_HIGH)
+        temp = round(random.uniform(37.2, 37.7), 1)
     elif anomaly == "high_hr_critical":
-        hr   = random.randint(HR_CRITICAL_HIGH + 1, 140)              # > 120
+        hr   = random.randint(HR_CRITICAL_HIGH + 1, 140)
         temp = round(random.uniform(37.3, 37.8), 1)
-
     elif anomaly == "low_hr_critical":
-        hr   = random.randint(30, HR_CRITICAL_LOW - 1)                # < 50
-
+        hr   = random.randint(30, HR_CRITICAL_LOW - 1)
     elif anomaly == "fever_warning":
-        temp = round(random.uniform(TEMP_WARNING_HIGH, TEMP_CRITICAL_HIGH), 1)  # 37.8–38.0
-        hr   = random.randint(95, HR_WARNING_HIGH - 1)                # slightly elevated
-
+        temp = round(random.uniform(TEMP_WARNING_HIGH, TEMP_CRITICAL_HIGH), 1)
+        hr   = random.randint(95, HR_WARNING_HIGH - 1)
     elif anomaly == "fever_critical":
-        temp = round(random.uniform(TEMP_CRITICAL_HIGH + 0.1, 40.0), 1)        # > 38.0
+        temp = round(random.uniform(TEMP_CRITICAL_HIGH + 0.1, 40.0), 1)
         hr   = random.randint(100, 115)
-
     elif anomaly == "hypothermia":
-        temp = round(random.uniform(32.0, TEMP_CRITICAL_LOW - 0.1), 1)         # < 35.0
+        temp = round(random.uniform(32.0, TEMP_CRITICAL_LOW - 0.1), 1)
         hr   = random.randint(45, 65)
-
     elif anomaly == "spo2_warning":
-        spo2 = random.randint(SPO2_WARNING_LOW - 1, SPO2_WARNING_LOW)          # 93–94
+        spo2 = random.randint(SPO2_WARNING_LOW - 1, SPO2_WARNING_LOW)
         hr   = random.randint(95, 110)
-
     elif anomaly == "spo2_critical":
-        spo2 = random.randint(85, SPO2_CRITICAL_LOW)                           # 85–92
+        spo2 = random.randint(85, SPO2_CRITICAL_LOW)
         hr   = random.randint(100, 120)
 
     return {"heart_rate": hr, "temperature": temp, "spo2": spo2, "anomaly": anomaly}
 
 
+# ---------------------------------------------------------------------------
+# Payload builder
+# ---------------------------------------------------------------------------
 def build_payload(state: VitalState) -> dict:
-    """
-    Return a payload dict. With probability ANOMALY_RATE, inject an anomaly
-    instead of drifting normally.
-    """
     is_anomaly = random.random() < ANOMALY_RATE
 
     if is_anomaly:
         values = pick_anomaly()
-        label = f"ANOMALY({values['anomaly']})"
+        label  = f"ANOMALY({values['anomaly']})"
     else:
         state.drift()
         values = {
@@ -147,8 +129,8 @@ def build_payload(state: VitalState) -> dict:
 
     return {
         "payload": {
-            "deviceCode": DEVICE_CODE,
-            "heartRate":  values["heart_rate"],
+            "deviceCode":  state.device_code,
+            "heartRate":   values["heart_rate"],
             "temperature": values["temperature"],
             "spo2":        values["spo2"],
             "recordedAt":  datetime.now(timezone.utc).isoformat(),
@@ -157,8 +139,10 @@ def build_payload(state: VitalState) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# HTTP
+# ---------------------------------------------------------------------------
 def send_vital_signs(payload: dict, label: str) -> bool:
-    """POST vital signs to the backend ingestion API. Returns True on success."""
     try:
         response = requests.post(VITALS_ENDPOINT, json=payload, timeout=5)
         response.raise_for_status()
@@ -172,26 +156,88 @@ def send_vital_signs(payload: dict, label: str) -> bool:
         )
         return True
     except requests.exceptions.ConnectionError:
-        log.error("Connection failed — is the backend running at %s?", API_BASE_URL)
+        log.error("[%s] Connection failed — is the backend running at %s?",
+                  payload["deviceCode"], API_BASE_URL)
     except requests.exceptions.Timeout:
-        log.error("Request timed out after 5s")
+        log.error("[%s] Request timed out after 5s", payload["deviceCode"])
     except requests.exceptions.HTTPError as e:
-        log.error("HTTP %s — %s", e.response.status_code, e.response.text)
+        log.error("[%s] HTTP %s — %s",
+                  payload["deviceCode"], e.response.status_code, e.response.text)
     return False
 
 
-def run():
-    log.info(
-        "Simulator starting — device=%s  interval=%ds  anomaly_rate=%.0f%%",
-        DEVICE_CODE, INTERVAL_SECONDS, ANOMALY_RATE * 100,
-    )
-    log.info("Target: %s", VITALS_ENDPOINT)
+# ---------------------------------------------------------------------------
+# Startup validation — verify each device code exists in the backend
+# ---------------------------------------------------------------------------
+def validate_device(device_code: str) -> bool:
+    """
+    Send a single test reading to check if the device code is accepted.
+    Returns True if the backend accepts it, False otherwise.
+    """
+    test_payload = {
+        "deviceCode":  device_code,
+        "heartRate":   72,
+        "temperature": 36.6,
+        "spo2":        98,
+        "recordedAt":  datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        response = requests.post(VITALS_ENDPOINT, json=test_payload, timeout=5)
+        if response.status_code == 201:
+            return True
+        log.error(
+            "Device '%s' rejected by backend — HTTP %s: %s",
+            device_code, response.status_code, response.text,
+        )
+        return False
+    except requests.exceptions.ConnectionError:
+        log.error("Cannot reach backend at %s — is it running?", API_BASE_URL)
+        return False
+    except requests.exceptions.Timeout:
+        log.error("Validation request timed out for device '%s'", device_code)
+        return False
 
-    state = VitalState()
+
+def parse_device_codes(raw: str) -> list[str]:
+    codes = [c.strip() for c in raw.split(",") if c.strip()]
+    if not codes:
+        log.error("DEVICE_CODES is empty. Set at least one device code in .env")
+        raise SystemExit(1)
+    return codes
+
+
+# ---------------------------------------------------------------------------
+# Main loop
+# ---------------------------------------------------------------------------
+def run():
+    device_codes = parse_device_codes(DEVICE_CODES_RAW)
+
+    log.info("Configured devices: %s", device_codes)
+    log.info("Validating device codes against backend...")
+
+    valid_states: list[VitalState] = []
+
+    for code in device_codes:
+        if validate_device(code):
+            log.info("  ✓ %s — accepted", code)
+            valid_states.append(VitalState(code))
+        else:
+            log.warning("  ✗ %s — skipping this device", code)
+
+    if not valid_states:
+        log.error("No valid devices found. Check your DEVICE_CODES and ensure "
+                  "they are registered in the backend. Exiting.")
+        raise SystemExit(1)
+
+    log.info(
+        "Simulator running — %d device(s)  interval=%ds  anomaly_rate=%.0f%%",
+        len(valid_states), INTERVAL_SECONDS, ANOMALY_RATE * 100,
+    )
 
     while True:
-        result = build_payload(state)
-        send_vital_signs(result["payload"], result["label"])
+        for state in valid_states:
+            result = build_payload(state)
+            send_vital_signs(result["payload"], result["label"])
         time.sleep(INTERVAL_SECONDS)
 
 
