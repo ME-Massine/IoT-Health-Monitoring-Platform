@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { patientApi } from "../api/patientApi";
 import { vitalSignApi } from "../api/vitalSignApi";
 import { alertApi } from "../api/alertApi";
+import { usePatientVitalsSocket } from "./usePatientVitalsSocket";
+import { usePatientAlertsSocket } from "./usePatientAlertsSocket";
 
 export function usePatientDetail(patientId) {
   const [patient, setPatient] = useState(null);
@@ -29,7 +31,7 @@ export function usePatientDetail(patientId) {
         setPatient(patientData);
         setVitalsHistory(historyData);
         setAlerts(alertsData);
-      } catch (err) {
+      } catch {
         if (!cancelled) setError("Failed to load patient data.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -39,6 +41,19 @@ export function usePatientDetail(patientId) {
     fetchAll();
     return () => { cancelled = true; };
   }, [patientId]);
+
+  // Prepend new vitals from WebSocket
+  usePatientVitalsSocket(patientId, (vital) => {
+    setVitalsHistory((prev) => [vital, ...prev.slice(0, 19)]);
+  });
+
+  // Prepend new alerts from WebSocket
+  usePatientAlertsSocket(patientId, (alert) => {
+    setAlerts((prev) => {
+      const exists = prev.some((a) => a.id === alert.id);
+      return exists ? prev : [alert, ...prev];
+    });
+  });
 
   function handleAlertResolved(updatedAlert) {
     setAlerts((prev) =>

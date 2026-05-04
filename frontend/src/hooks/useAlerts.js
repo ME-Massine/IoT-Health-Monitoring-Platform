@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { alertApi } from "../api/alertApi";
+import { useGlobalAlertsSocket } from "./useGlobalAlertsSocket";
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState([]);
-  const [filter, setFilter] = useState("unresolved"); // "unresolved" | "all"
+  const [filter, setFilter] = useState("unresolved");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -31,6 +32,16 @@ export function useAlerts() {
     fetchAlerts();
     return () => { cancelled = true; };
   }, [filter]);
+
+  // Prepend new alerts from WebSocket (only when showing unresolved)
+  useGlobalAlertsSocket((incoming) => {
+    if (filter === "unresolved") {
+      setAlerts((prev) => {
+        const exists = prev.some((a) => a.id === incoming.id);
+        return exists ? prev : [incoming, ...prev];
+      });
+    }
+  });
 
   function handleAlertResolved(updatedAlert) {
     setAlerts((prev) =>
