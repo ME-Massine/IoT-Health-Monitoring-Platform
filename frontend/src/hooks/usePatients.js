@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { patientApi } from "../api/patientApi";
 import { vitalSignApi } from "../api/vitalSignApi";
+import { createStompClient } from "../api/wsClient";
 
 export function usePatients() {
   const [patients, setPatients] = useState([]);
@@ -32,7 +33,7 @@ export function usePatients() {
           vitalsMap[p.id] = result.status === "fulfilled" ? result.value : null;
         });
         setVitals(vitalsMap);
-      } catch (err) {
+      } catch {
         if (!cancelled) setError("Failed to load patients. Is the backend running?");
       } finally {
         if (!cancelled) setLoading(false);
@@ -41,6 +42,27 @@ export function usePatients() {
 
     fetchData();
     return () => { cancelled = true; };
+  }, []);
+
+  // Live-patch vitals via global /topic/vitals
+  useEffect(() => {
+    const client = createStompClient();
+
+    client.onConnect = () => {
+      client.subscribe("/topic/vitals", (message) => {
+        try {
+          const vital = JSON.parse(message.body);
+          if (vital.patientId != null) {
+            setVitals((prev) => ({ ...prev, [vital.patientId]: vital }));
+          }
+        } catch {
+          console.warn("Failed to parse vitals WS message");
+        }
+      });
+    };
+
+    client.activate();
+    return () => client.deactivate();
   }, []);
 
   return { patients, vitals, loading, error };
