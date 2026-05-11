@@ -29,3 +29,9 @@ app:
     allowed-origins: http://localhost:5173,http://localhost:3000
   websocket:
     allowed-origins: http://localhost:5173,http://localhost:3000
+  mqtt:
+    enabled: false                          # set to true to enable MQTT ingestion
+    broker-url: tcp://localhost:1883        # Mosquitto broker URL
+    client-id: iot-health-backend           # unique client ID for this service
+    topic-pattern: iot-health/devices/+/vitals  # + matches any single device code
+    qos: 1                                  # 0=at-most-once, 1=at-least-once, 2=exactly-once
