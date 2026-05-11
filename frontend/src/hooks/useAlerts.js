@@ -3,7 +3,7 @@ import { alertApi } from "../api/alertApi";
 import { useGlobalAlertsSocket } from "./useGlobalAlertsSocket";
 
 export function useAlerts() {
-  const [alerts, setAlerts] = useState([]);
+  const [allAlerts, setAllAlerts] = useState([]);
   const [filter, setFilter] = useState("unresolved");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,13 +15,11 @@ export function useAlerts() {
       try {
         setLoading(true);
         setError(null);
-
         const data =
           filter === "unresolved"
             ? await alertApi.getUnresolved()
             : await alertApi.getAll();
-
-        if (!cancelled) setAlerts(data);
+        if (!cancelled) setAllAlerts(data);
       } catch {
         if (!cancelled) setError("Failed to load alerts.");
       } finally {
@@ -33,10 +31,11 @@ export function useAlerts() {
     return () => { cancelled = true; };
   }, [filter]);
 
-  // Prepend new alerts from WebSocket (only when showing unresolved)
+  // Prepend live alerts from WebSocket when showing active filters
   useGlobalAlertsSocket((incoming) => {
-    if (filter === "unresolved") {
-      setAlerts((prev) => {
+    const isActiveFilter = filter === "unresolved" || filter === "critical" || filter === "warning";
+    if (isActiveFilter) {
+      setAllAlerts((prev) => {
         const exists = prev.some((a) => a.id === incoming.id);
         return exists ? prev : [incoming, ...prev];
       });
@@ -44,10 +43,19 @@ export function useAlerts() {
   });
 
   function handleAlertResolved(updatedAlert) {
-    setAlerts((prev) =>
+    setAllAlerts((prev) =>
       prev.map((a) => (a.id === updatedAlert.id ? updatedAlert : a))
     );
   }
+
+  // Client-side filter for severity-specific views
+  const alerts = (() => {
+    if (filter === "critical")
+      return allAlerts.filter((a) => !a.resolved && a.severity === "CRITICAL");
+    if (filter === "warning")
+      return allAlerts.filter((a) => !a.resolved && a.severity === "WARNING");
+    return allAlerts;
+  })();
 
   return { alerts, filter, setFilter, loading, error, handleAlertResolved };
 }

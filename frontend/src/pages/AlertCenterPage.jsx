@@ -1,11 +1,31 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useAlerts } from "../hooks/useAlerts";
 import { alertApi } from "../api/alertApi";
-import { useState } from "react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+
+const FILTERS = [
+  { key: "unresolved", label: "Unresolved" },
+  { key: "critical",   label: "Critical"   },
+  { key: "warning",    label: "Warnings"   },
+  { key: "all",        label: "All"        },
+];
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function formatType(type) {
+  return type.replace(/_/g, " ");
+}
 
 export function AlertCenterPage() {
-  const { alerts, filter, setFilter, loading, error, handleAlertResolved } =
-    useAlerts();
+  const { alerts, filter, setFilter, loading, error, handleAlertResolved } = useAlerts();
   const [resolvingId, setResolvingId] = useState(null);
 
   async function handleResolve(alertId) {
@@ -20,41 +40,49 @@ export function AlertCenterPage() {
     }
   }
 
-  const unresolvedCount = alerts.filter((a) => !a.resolved).length;
+  const criticalCount = alerts.filter((a) => !a.resolved && a.severity === "CRITICAL").length;
+  const warningCount  = alerts.filter((a) => !a.resolved && a.severity === "WARNING").length;
+  const resolvedCount = alerts.filter((a) => a.resolved).length;
 
   return (
     <section className="alert-center">
-      <div className="alert-center__header">
-        <h2>
-          Alert Center{" "}
-          {!loading && unresolvedCount > 0 && (
-            <span className="badge badge--warning">{unresolvedCount} unresolved</span>
-          )}
-        </h2>
+      <h2 className="page-title">Alert Center</h2>
 
-        <div className="alert-center__filters">
-          <button
-            className={`filter-btn ${filter === "unresolved" ? "filter-btn--active" : ""}`}
-            onClick={() => setFilter("unresolved")}
-          >
-            Unresolved
-          </button>
-          <button
-            className={`filter-btn ${filter === "all" ? "filter-btn--active" : ""}`}
-            onClick={() => setFilter("all")}
-          >
-            All
-          </button>
+      <div className="alert-summary-bar">
+        <div className="alert-summary-card alert-summary-card--critical">
+          <AlertCircle size={18} />
+          <span className="alert-summary-card__count">{criticalCount}</span>
+          <span className="alert-summary-card__label">Critical</span>
+        </div>
+        <div className="alert-summary-card alert-summary-card--warning">
+          <AlertTriangle size={18} />
+          <span className="alert-summary-card__count">{warningCount}</span>
+          <span className="alert-summary-card__label">Warnings</span>
+        </div>
+        <div className="alert-summary-card alert-summary-card--resolved">
+          <CheckCircle size={18} />
+          <span className="alert-summary-card__count">{resolvedCount}</span>
+          <span className="alert-summary-card__label">Resolved</span>
         </div>
       </div>
 
-      {loading && <p>Loading alerts…</p>}
-      {error && <p className="error">{error}</p>}
+      <div className="alert-center__filters">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            className={`filter-btn ${filter === f.key ? "filter-btn--active" : ""}`}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading && <p className="loading-text">Loading alerts…</p>}
+      {error   && <p className="error">{error}</p>}
 
       {!loading && !error && alerts.length === 0 && (
-        <p className="no-data">
-          {filter === "unresolved" ? "No unresolved alerts." : "No alerts found."}
-        </p>
+        <p className="no-data">No alerts found for this filter.</p>
       )}
 
       {!loading && !error && alerts.length > 0 && (
@@ -62,43 +90,49 @@ export function AlertCenterPage() {
           {alerts.map((a) => (
             <div
               key={a.id}
-              className={`alert-item alert-item--${a.severity.toLowerCase()} ${a.resolved ? "alert-item--resolved" : ""}`}
+              className={`alert-row alert-row--${a.severity.toLowerCase()} ${a.resolved ? "alert-row--resolved" : ""}`}
             >
-              <div className="alert-item__header">
-                <span className="alert-item__type">{a.type}</span>
-                <span className="alert-item__severity">{a.severity}</span>
-                {a.resolved && (
-                  <span className="alert-item__badge">Resolved</span>
-                )}
+              <div className="alert-row__icon">
+                {a.severity === "CRITICAL"
+                  ? <AlertCircle size={16} className="icon--critical" />
+                  : <AlertTriangle size={16} className="icon--warning" />}
               </div>
 
-              <p className="alert-item__message">{a.message}</p>
-
-              <div className="alert-item__footer">
-                <div className="alert-item__meta">
-                  <span className="alert-item__time">
-                    {new Date(a.createdAt).toLocaleString()}
+              <div className="alert-row__body">
+                <div className="alert-row__top">
+                  <span className={`severity-badge severity-badge--${a.severity.toLowerCase()}`}>
+                    {a.severity}
                   </span>
+                  <span className="alert-row__type">{formatType(a.type)}</span>
+                  {a.resolved && (
+                    <span className="resolved-tag">
+                      <CheckCircle size={11} /> Resolved
+                    </span>
+                  )}
+                </div>
+
+                <p className="alert-row__message">{a.message}</p>
+
+                <div className="alert-row__meta">
+                  <Clock size={11} />
+                  <span className="alert-row__time">{timeAgo(a.createdAt)}</span>
                   {a.patientFullName && (
-                    <Link
-                      to={`/patients/${a.patientId}`}
-                      className="alert-item__patient-link"
-                    >
+                    <Link to={`/patients/${a.patientId}`} className="alert-row__patient-link">
                       {a.patientFullName}
                     </Link>
                   )}
                 </div>
-
-                {!a.resolved && (
-                  <button
-                    className="btn btn--small"
-                    onClick={() => handleResolve(a.id)}
-                    disabled={resolvingId === a.id}
-                  >
-                    {resolvingId === a.id ? "Resolving…" : "Resolve"}
-                  </button>
-                )}
               </div>
+
+              {!a.resolved && (
+                <button
+                  className="btn btn--resolve"
+                  onClick={() => handleResolve(a.id)}
+                  disabled={resolvingId === a.id}
+                >
+                  {resolvingId === a.id ? "…" : "Resolve"}
+                </button>
+              )}
             </div>
           ))}
         </div>

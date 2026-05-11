@@ -1,7 +1,36 @@
 import { useParams, Link } from "react-router-dom";
 import { usePatientDetail } from "../hooks/usePatientDetail";
-import { VitalsHistory } from "../components/detail/VitalsHistory";
+import { VitalCard } from "../components/detail/VitalCard";
+import { VitalChart } from "../components/detail/VitalChart";
 import { PatientAlerts } from "../components/detail/PatientAlerts";
+import {
+  getHeartRateStatus,
+  getTemperatureStatus,
+  getSpo2Status,
+  getPatientStatus,
+} from "../utils/vitalStatus";
+
+const HR_REFS = [
+  { value: 110, color: "#f59e0b" },
+  { value: 120, color: "#dc2626" },
+  { value: 50,  color: "#dc2626" },
+];
+const TEMP_REFS = [
+  { value: 37.8, color: "#f59e0b" },
+  { value: 38.0, color: "#dc2626" },
+  { value: 35.0, color: "#dc2626" },
+];
+const SPO2_REFS = [
+  { value: 94, color: "#f59e0b" },
+  { value: 92, color: "#dc2626" },
+];
+
+const STATUS_LABEL = {
+  critical: "CRITICAL",
+  warning: "WARNING",
+  stable: "STABLE",
+  unknown: "NO DATA",
+};
 
 export function PatientDetailPage() {
   const { patientId } = useParams();
@@ -11,7 +40,7 @@ export function PatientDetailPage() {
   if (loading) {
     return (
       <section>
-        <p>Loading patient…</p>
+        <p className="loading-text">Loading patient…</p>
       </section>
     );
   }
@@ -28,6 +57,8 @@ export function PatientDetailPage() {
   if (!patient) return null;
 
   const fullName = `${patient.firstName} ${patient.lastName}`;
+  const latest = vitalsHistory[0] ?? null;
+  const status = getPatientStatus(latest);
   const unresolvedCount = alerts.filter((a) => !a.resolved).length;
 
   return (
@@ -37,27 +68,85 @@ export function PatientDetailPage() {
       </div>
 
       <div className="patient-detail__header">
-        <h2>{fullName}</h2>
-        <span className="patient-detail__room">Room {patient.roomNumber}</span>
+        <div className="patient-detail__title-row">
+          <h2 className="patient-detail__name">{fullName}</h2>
+          <span className="patient-detail__room-tag">Room {patient.roomNumber}</span>
+          <span className={`status-badge status-badge--${status}`}>
+            {STATUS_LABEL[status]}
+          </span>
+        </div>
+        <div className="patient-detail__meta">
+          {patient.age} yrs · {patient.gender}
+          {patient.medicalCondition && <span> · {patient.medicalCondition}</span>}
+        </div>
       </div>
 
-      <div className="patient-detail__info">
-        <span>{patient.age} yrs</span>
-        <span>{patient.gender}</span>
-        {patient.medicalCondition && <span>{patient.medicalCondition}</span>}
+      <div className="vital-cards-row">
+        <VitalCard
+          label="Heart Rate"
+          value={latest?.heartRate}
+          unit="bpm"
+          status={getHeartRateStatus(latest?.heartRate)}
+        />
+        <VitalCard
+          label="Temperature"
+          value={latest?.temperature}
+          unit="°C"
+          status={getTemperatureStatus(latest?.temperature)}
+        />
+        <VitalCard
+          label="SpO2"
+          value={latest?.spo2}
+          unit="%"
+          status={getSpo2Status(latest?.spo2)}
+        />
       </div>
 
-      <div className="patient-detail__sections">
-        <div className="patient-detail__section">
-          <h3>Vitals History <span className="section-count">(last 20)</span></h3>
-          <VitalsHistory vitals={vitalsHistory} />
+      <div className="patient-detail__body">
+        <div className="patient-detail__charts">
+          <h3 className="section-title">Vital Trends</h3>
+
+          <div className="chart-block">
+            <div className="chart-block__label">Heart Rate (bpm)</div>
+            <VitalChart
+              vitals={vitalsHistory}
+              dataKey="heartRate"
+              color="#ef4444"
+              refLines={HR_REFS}
+              yDomain={["auto", "auto"]}
+            />
+          </div>
+
+          <div className="chart-block">
+            <div className="chart-block__label">Temperature (°C)</div>
+            <VitalChart
+              vitals={vitalsHistory}
+              dataKey="temperature"
+              color="#f97316"
+              refLines={TEMP_REFS}
+              yDomain={[34, 40]}
+            />
+          </div>
+
+          <div className="chart-block">
+            <div className="chart-block__label">SpO2 (%)</div>
+            <VitalChart
+              vitals={vitalsHistory}
+              dataKey="spo2"
+              color="#3b82f6"
+              refLines={SPO2_REFS}
+              yDomain={[85, 100]}
+            />
+          </div>
         </div>
 
-        <div className="patient-detail__section">
-          <h3>
-            Alerts{" "}
+        <div className="patient-detail__alerts">
+          <h3 className="section-title">
+            Alert Timeline
             {unresolvedCount > 0 && (
-              <span className="badge badge--warning">{unresolvedCount} unresolved</span>
+              <span className="badge badge--critical" style={{ marginLeft: "0.5rem" }}>
+                {unresolvedCount} active
+              </span>
             )}
           </h3>
           <PatientAlerts alerts={alerts} onAlertResolved={handleAlertResolved} />
