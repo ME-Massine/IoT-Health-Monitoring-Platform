@@ -4,9 +4,13 @@ import { Activity, LayoutDashboard, Bell, Cpu } from "lucide-react";
 import { alertApi } from "../../api/alertApi";
 import { useGlobalAlertsSocket } from "../../hooks/useGlobalAlertsSocket";
 
+const WS_BASE = import.meta.env.VITE_WS_URL ?? "http://localhost:8080";
+const HEALTH_URL = WS_BASE.replace(/\/ws$/, "") + "/actuator/health";
+
 export function AppLayout() {
   const [unresolvedCount, setUnresolvedCount] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [systemStatus, setSystemStatus] = useState("UP");
 
   const refreshCount = useCallback(() => {
     alertApi
@@ -31,6 +35,18 @@ export function AppLayout() {
     }
     window.addEventListener("alert-resolved", onResolved);
     return () => window.removeEventListener("alert-resolved", onResolved);
+  }, []);
+
+  useEffect(() => {
+    function checkHealth() {
+      fetch(HEALTH_URL)
+        .then((r) => r.json())
+        .then((data) => setSystemStatus(data.status ?? "UNKNOWN"))
+        .catch(() => setSystemStatus("DOWN"));
+    }
+    checkHealth();
+    const id = setInterval(checkHealth, 30_000);
+    return () => clearInterval(id);
   }, []);
 
   // Increment badge immediately when a new alert arrives via WebSocket
@@ -78,9 +94,9 @@ export function AppLayout() {
         </nav>
 
         <div className="sidebar__footer">
-          <div className="system-status">
+          <div className={`system-status ${systemStatus !== "UP" ? "system-status--down" : ""}`}>
             <span className="system-status__dot" />
-            System Online
+            {systemStatus === "UP" ? "System Online" : systemStatus === "DOWN" ? "System Offline" : "System Degraded"}
           </div>
           <div className="system-status__time">
             Updated {lastUpdate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

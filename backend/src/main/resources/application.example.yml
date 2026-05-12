@@ -23,6 +23,22 @@ management:
     web:
       exposure:
         include: health,info
+      cors:
+        allowed-origins: http://localhost:5173,http://localhost:3000
+        allowed-methods: GET
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: IoT Health Monitoring Platform
+    version: 1.0.0
+    description: Real-time patient vital signs monitoring via IoT devices
 
 app:
   cors:

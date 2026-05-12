@@ -119,6 +119,14 @@ p { margin: 0; }
   margin-top: 3px;
 }
 
+.system-status--down {
+  color: #f87171;
+}
+.system-status--down .system-status__dot {
+  background: #f87171;
+  box-shadow: 0 0 6px #f87171;
+}
+
 .main-content {
   flex: 1;
   padding: 28px 32px;

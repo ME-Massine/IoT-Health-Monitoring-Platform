@@ -24,4 +24,6 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
 
     boolean existsByPatientIdAndTypeAndResolvedFalseAndCreatedAtAfter(
             Long patientId, AlertType type, Instant since);
+
+    long countByResolvedFalse();
 }
