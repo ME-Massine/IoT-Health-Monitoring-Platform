@@ -57,5 +57,5 @@ export function useAlerts() {
     return allAlerts;
   })();
 
-  return { alerts, filter, setFilter, loading, error, handleAlertResolved };
+  return { alerts, allAlerts, filter, setFilter, loading, error, handleAlertResolved };
 }

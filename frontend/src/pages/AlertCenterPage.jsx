@@ -2,7 +2,10 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAlerts } from "../hooks/useAlerts";
 import { alertApi } from "../api/alertApi";
-import { AlertCircle, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, BellOff } from "lucide-react";
+import { AlertRowSkeleton } from "../components/ui/Skeleton";
+import { EmptyState } from "../components/ui/EmptyState";
+import { formatTimeAgo } from "../utils/time";
 
 const FILTERS = [
   { key: "unresolved", label: "Unresolved" },
@@ -11,21 +14,12 @@ const FILTERS = [
   { key: "all",        label: "All"        },
 ];
 
-function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 function formatType(type) {
   return type.replace(/_/g, " ");
 }
 
 export function AlertCenterPage() {
-  const { alerts, filter, setFilter, loading, error, handleAlertResolved } = useAlerts();
+  const { alerts, allAlerts, filter, setFilter, loading, error, handleAlertResolved } = useAlerts();
   const [resolvingId, setResolvingId] = useState(null);
 
   async function handleResolve(alertId) {
@@ -41,9 +35,18 @@ export function AlertCenterPage() {
     }
   }
 
-  const criticalCount = alerts.filter((a) => !a.resolved && a.severity === "CRITICAL").length;
-  const warningCount  = alerts.filter((a) => !a.resolved && a.severity === "WARNING").length;
-  const resolvedCount = alerts.filter((a) => a.resolved).length;
+  // Always compute summary counts from the full list so they don't change with the filter
+  const criticalCount = allAlerts.filter((a) => !a.resolved && a.severity === "CRITICAL").length;
+  const warningCount  = allAlerts.filter((a) => !a.resolved && a.severity === "WARNING").length;
+  const resolvedCount = allAlerts.filter((a) => a.resolved).length;
+  const unresolvedCount = allAlerts.filter((a) => !a.resolved).length;
+
+  const filterCounts = {
+    unresolved: unresolvedCount,
+    critical:   criticalCount,
+    warning:    warningCount,
+    all:        allAlerts.length,
+  };
 
   return (
     <section className="alert-center">
@@ -75,15 +78,28 @@ export function AlertCenterPage() {
             onClick={() => setFilter(f.key)}
           >
             {f.label}
+            <span className="filter-btn__count">{filterCounts[f.key] ?? 0}</span>
           </button>
         ))}
       </div>
 
-      {loading && <p className="loading-text">Loading alerts…</p>}
-      {error   && <p className="error">{error}</p>}
+      {loading && (
+        <div className="alert-center__list">
+          {Array.from({ length: 5 }).map((_, i) => <AlertRowSkeleton key={i} />)}
+        </div>
+      )}
+      {!loading && error && <p className="error">{error}</p>}
 
       {!loading && !error && alerts.length === 0 && (
-        <p className="no-data">No alerts found for this filter.</p>
+        <EmptyState
+          icon={BellOff}
+          title={filter === "unresolved" ? "All clear" : "No alerts in this view"}
+          subtitle={
+            filter === "unresolved"
+              ? "No active alerts right now. The system will notify you when one arrives."
+              : "Try switching to another filter to see more alerts."
+          }
+        />
       )}
 
       {!loading && !error && alerts.length > 0 && (
@@ -116,7 +132,7 @@ export function AlertCenterPage() {
 
                 <div className="alert-row__meta">
                   <Clock size={11} />
-                  <span className="alert-row__time">{timeAgo(a.createdAt)}</span>
+                  <span className="alert-row__time">{formatTimeAgo(a.createdAt)}</span>
                   {a.patientFullName && (
                     <Link to={`/patients/${a.patientId}`} className="alert-row__patient-link">
                       {a.patientFullName}

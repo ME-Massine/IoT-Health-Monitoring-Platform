@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Heart, Thermometer, Activity, Wrench, Clock } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Heart, Thermometer, Activity, Wrench, Clock, ChevronRight } from "lucide-react";
 import {
   getPatientStatus,
   getHeartRateStatus,
   getTemperatureStatus,
   getSpo2Status,
 } from "../../utils/vitalStatus";
+import { formatTimeAgo } from "../../utils/time";
 
 const STATUS_LABEL = {
   critical: "CRITICAL",
@@ -17,20 +18,30 @@ const STATUS_LABEL = {
 
 const STALE_AFTER_MS = 2 * 60 * 1000;
 
-function relativeTime(recordedAt, now) {
-  const diff = Math.floor((now - new Date(recordedAt).getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
-}
-
 export function PatientCard({ patient, vitals, deviceStatus }) {
+  const navigate = useNavigate();
   const [now, setNow] = useState(Date.now());
+  const [pulse, setPulse] = useState(false);
+  const prevRecordedAt = useRef(vitals?.recordedAt);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (
+      vitals?.recordedAt &&
+      prevRecordedAt.current &&
+      vitals.recordedAt !== prevRecordedAt.current
+    ) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 700);
+      prevRecordedAt.current = vitals.recordedAt;
+      return () => clearTimeout(t);
+    }
+    prevRecordedAt.current = vitals?.recordedAt;
+  }, [vitals?.recordedAt]);
 
   const fullName = `${patient.firstName} ${patient.lastName}`;
   const isOffline = deviceStatus && deviceStatus !== "ACTIVE";
@@ -39,12 +50,30 @@ export function PatientCard({ patient, vitals, deviceStatus }) {
     vitals?.recordedAt &&
     now - new Date(vitals.recordedAt).getTime() > STALE_AFTER_MS;
   const status = isOffline ? "unknown" : getPatientStatus(vitals);
-  const hrStatus = vitals ? getHeartRateStatus(vitals.heartRate) : "unknown";
+  const hrStatus   = vitals ? getHeartRateStatus(vitals.heartRate)     : "unknown";
   const tempStatus = vitals ? getTemperatureStatus(vitals.temperature) : "unknown";
-  const spo2Status = vitals ? getSpo2Status(vitals.spo2) : "unknown";
+  const spo2Status = vitals ? getSpo2Status(vitals.spo2)               : "unknown";
+
+  function handleClick() {
+    navigate(`/patients/${patient.id}`);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  }
 
   return (
-    <div className={`patient-card patient-card--${status}`}>
+    <div
+      className={`patient-card patient-card--${status} patient-card--clickable ${pulse ? "patient-card--pulse" : ""}`}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${fullName}`}
+    >
       <div className="patient-card__header">
         <span className="patient-card__name">{fullName}</span>
         {isOffline ? (
@@ -90,7 +119,7 @@ export function PatientCard({ patient, vitals, deviceStatus }) {
             {isStale && (
               <div className="stale-chip">
                 <Clock size={10} />
-                <span>{relativeTime(vitals.recordedAt, now)}</span>
+                <span>{formatTimeAgo(vitals.recordedAt)}</span>
               </div>
             )}
           </>
@@ -99,9 +128,9 @@ export function PatientCard({ patient, vitals, deviceStatus }) {
         )}
       </div>
 
-      <Link to={`/patients/${patient.id}`} className="patient-card__link">
-        View details →
-      </Link>
+      <div className="patient-card__footer">
+        <ChevronRight size={14} className="patient-card__chevron" />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Cpu, Wrench, Wifi, WifiOff, PowerOff } from "lucide-react";
 import { deviceApi } from "../api/deviceApi";
+import { DeviceRowSkeleton } from "../components/ui/Skeleton";
+import { formatTimeAgo } from "../utils/time";
 
 const STATUS_META = {
   ACTIVE:      { label: "Active",      cls: "device-status--active",      Icon: Wifi },
@@ -32,6 +34,8 @@ export function DevicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
+  const confirmTimer = useRef(null);
 
   useEffect(() => {
     deviceApi.getAll()
@@ -40,12 +44,19 @@ export function DevicesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleToggle(device) {
+  useEffect(() => {
+    return () => {
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    };
+  }, []);
+
+  async function executeToggle(device) {
     const next = device.status === "ACTIVE" ? "MAINTENANCE"
       : device.status === "MAINTENANCE" ? "ACTIVE"
       : "ACTIVE";
 
     setTogglingId(device.id);
+    setConfirmingId(null);
     try {
       const updated = await deviceApi.setStatus(device.id, next);
       setDevices((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
@@ -55,6 +66,22 @@ export function DevicesPage() {
     } finally {
       setTogglingId(null);
     }
+  }
+
+  function handleToggle(device) {
+    // Going ACTIVE → MAINTENANCE is destructive (blocks data), require confirmation.
+    // Going MAINTENANCE → ACTIVE is safe, execute immediately.
+    if (device.status !== "ACTIVE") {
+      executeToggle(device);
+      return;
+    }
+    if (confirmingId === device.id) {
+      executeToggle(device);
+      return;
+    }
+    setConfirmingId(device.id);
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    confirmTimer.current = setTimeout(() => setConfirmingId(null), 3000);
   }
 
   const maintenanceCount = devices.filter((d) => d.status === "MAINTENANCE").length;
@@ -83,10 +110,9 @@ export function DevicesPage() {
         </div>
       </div>
 
-      {loading && <p className="loading-text">Loading devices…</p>}
-      {error   && <p className="error">{error}</p>}
+      {!loading && error && <p className="error">{error}</p>}
 
-      {!loading && !error && (
+      {(loading || (!loading && !error)) && (
         <div className="devices-table-wrap">
           <table className="devices-table">
             <thead>
@@ -100,7 +126,8 @@ export function DevicesPage() {
               </tr>
             </thead>
             <tbody>
-              {devices.map((d) => (
+              {loading && Array.from({ length: 5 }).map((_, i) => <DeviceRowSkeleton key={i} />)}
+              {!loading && devices.map((d) => (
                 <tr
                   key={d.id}
                   className={`devices-table__row ${d.status === "MAINTENANCE" ? "devices-table__row--maintenance" : ""} ${d.status === "INACTIVE" ? "devices-table__row--inactive" : ""}`}
@@ -118,16 +145,23 @@ export function DevicesPage() {
                     ) : "—"}
                   </td>
                   <td><StatusBadge status={d.status} /></td>
-                  <td className="devices-table__time">{formatDate(d.updatedAt)}</td>
+                  <td className="devices-table__time" title={formatDate(d.updatedAt)}>
+                    {d.updatedAt ? formatTimeAgo(d.updatedAt) : "—"}
+                  </td>
                   <td>
                     {d.status !== "INACTIVE" && (
                       <button
-                        className={`btn devices-table__toggle-btn ${d.status === "MAINTENANCE" ? "btn--activate" : "btn--maintenance"}`}
+                        className={`btn devices-table__toggle-btn ${
+                          confirmingId === d.id ? "btn--confirm" :
+                          d.status === "MAINTENANCE" ? "btn--activate" : "btn--maintenance"
+                        }`}
                         onClick={() => handleToggle(d)}
                         disabled={togglingId === d.id}
                       >
                         {togglingId === d.id
                           ? "…"
+                          : confirmingId === d.id
+                          ? "Click to confirm"
                           : d.status === "MAINTENANCE"
                           ? "Set Active"
                           : "Set Maintenance"}

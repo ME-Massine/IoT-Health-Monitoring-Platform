@@ -4,6 +4,7 @@ import { usePatientDetail } from "../hooks/usePatientDetail";
 import { VitalCard } from "../components/detail/VitalCard";
 import { VitalChart } from "../components/detail/VitalChart";
 import { PatientAlerts } from "../components/detail/PatientAlerts";
+import { PatientDetailSkeleton } from "../components/ui/Skeleton";
 import {
   getHeartRateStatus,
   getTemperatureStatus,
@@ -38,13 +39,7 @@ export function PatientDetailPage() {
   const { patient, vitalsHistory, alerts, device, maintenanceWindows, loading, error, handleAlertResolved } =
     usePatientDetail(patientId);
 
-  if (loading) {
-    return (
-      <section>
-        <p className="loading-text">Loading patient…</p>
-      </section>
-    );
-  }
+  if (loading) return <PatientDetailSkeleton />;
 
   if (error) {
     return (

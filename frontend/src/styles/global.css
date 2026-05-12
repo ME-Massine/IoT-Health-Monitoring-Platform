@@ -127,6 +127,19 @@ p { margin: 0; }
   box-shadow: 0 0 6px #f87171;
 }
 
+/* ── Skeleton shimmer ─────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e8edf2 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── Toast notifications ──────────────────────────────── */
 .toast-stack {
   position: fixed;
@@ -303,7 +316,77 @@ p { margin: 0; }
 .dashboard__filters {
   display: flex;
   gap: 0.5rem;
+}
+
+.dashboard__controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* ── Search input ─────────────────────────────────────── */
+.search-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 0 0.6rem;
+  min-width: 280px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.search-input__icon { color: #94a3b8; flex-shrink: 0; }
+.search-input input {
+  flex: 1;
+  padding: 0.4rem 0.4rem 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #1e293b;
+}
+.search-input input::placeholder { color: #94a3b8; }
+.search-input__clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 1.05rem;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+.search-input__clear:hover { color: #475569; }
+
+/* ── Filter button count badge ────────────────────────── */
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.filter-btn__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.1rem;
+  padding: 0 0.35rem;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 10px;
+}
+.filter-btn--active .filter-btn__count {
+  background: rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
 }
 
 /* ── KPI Strip ────────────────────────────────────────── */
@@ -373,6 +456,42 @@ p { margin: 0; }
   transition: box-shadow 0.2s;
 }
 .patient-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+.patient-card--clickable {
+  cursor: pointer;
+  position: relative;
+  outline: none;
+}
+.patient-card--clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+}
+.patient-card--clickable:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+.patient-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.25rem;
+}
+.patient-card__chevron {
+  color: #94a3b8;
+  transition: transform 0.15s, color 0.15s;
+}
+.patient-card--clickable:hover .patient-card__chevron {
+  color: #2563eb;
+  transform: translateX(2px);
+}
+
+/* Brief pulse when new vitals arrive via WebSocket */
+.patient-card--pulse {
+  animation: card-pulse 0.7s ease-out;
+}
+@keyframes card-pulse {
+  0%   { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  40%  { box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25), 0 1px 3px rgba(0,0,0,0.04); }
+  100% { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+}
 
 .patient-card--critical { border-left-color: #dc2626; }
 .patient-card--warning  { border-left-color: #d97706; }
@@ -835,7 +954,59 @@ p { margin: 0; }
 }
 .btn--activate:hover:not(:disabled) { background: #dcfce7; }
 
+.btn--confirm {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  animation: confirm-pulse 1s ease-in-out infinite;
+}
+.btn--confirm:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+@keyframes confirm-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35); }
+  50%      { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
+}
+
 .devices-table__toggle-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Empty State ──────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #475569;
+}
+.empty-state__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  margin-bottom: 0.85rem;
+}
+.empty-state__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.3rem;
+}
+.empty-state__subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
+  max-width: 30rem;
+  line-height: 1.5;
+}
 
 /* Device status badges */
 .device-status-badge {

@@ -10,8 +10,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-function formatTime(dateStr) {
-  return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function formatTime(ms) {
+  return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function isInMaintenance(recordedAt, maintenanceWindows) {
@@ -48,7 +48,7 @@ export function VitalChart({ vitals, dataKey, color, refLines = [], yDomain, mai
   const data = [...vitals].reverse().map((v) => {
     const inMaintenance = maintenanceWindows.length > 0 && isInMaintenance(v.recordedAt, maintenanceWindows);
     return {
-      time: formatTime(v.recordedAt),
+      time: new Date(v.recordedAt).getTime(),   // unique numeric key — no collision
       value: inMaintenance
         ? null
         : dataKey === "temperature"
@@ -66,6 +66,10 @@ export function VitalChart({ vitals, dataKey, color, refLines = [], yDomain, mai
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
         <XAxis
           dataKey="time"
+          type="number"
+          scale="time"
+          domain={["dataMin", "dataMax"]}
+          tickFormatter={formatTime}
           tick={{ fontSize: 10, fill: "#94a3b8" }}
           interval="preserveStartEnd"
           axisLine={false}
@@ -80,6 +84,7 @@ export function VitalChart({ vitals, dataKey, color, refLines = [], yDomain, mai
         <Tooltip
           contentStyle={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}
           formatter={(v) => v == null ? ["Maintenance", ""] : [v, ""]}
+          labelFormatter={formatTime}
           labelStyle={{ color: "#64748b" }}
         />
 
