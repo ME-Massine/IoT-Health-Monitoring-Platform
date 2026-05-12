@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { Activity, LayoutDashboard, Bell, Cpu } from "lucide-react";
 import { alertApi } from "../../api/alertApi";
 import { useGlobalAlertsSocket } from "../../hooks/useGlobalAlertsSocket";
+import { ToastContainer } from "../ui/ToastContainer";
 
 const WS_BASE = import.meta.env.VITE_WS_URL ?? "http://localhost:8080";
 const HEALTH_URL = WS_BASE.replace(/\/ws$/, "") + "/actuator/health";
@@ -11,6 +12,11 @@ export function AppLayout() {
   const [unresolvedCount, setUnresolvedCount] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [systemStatus, setSystemStatus] = useState("UP");
+  const [toasts, setToasts] = useState([]);
+
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const refreshCount = useCallback(() => {
     alertApi
@@ -49,16 +55,27 @@ export function AppLayout() {
     return () => clearInterval(id);
   }, []);
 
-  // Increment badge immediately when a new alert arrives via WebSocket
+  // Increment badge and show toast immediately when a new alert arrives via WebSocket
   useGlobalAlertsSocket((incoming) => {
     if (!incoming.resolved) {
       setUnresolvedCount((prev) => prev + 1);
       setLastUpdate(new Date());
+      setToasts((prev) => [
+        ...prev,
+        {
+          id: incoming.id ?? Date.now(),
+          severity: incoming.severity,
+          message: incoming.message,
+          patientName: incoming.patientFullName,
+          patientId: incoming.patientId,
+        },
+      ]);
     }
   });
 
   return (
     <div className="app-shell">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <aside className="sidebar">
         <div className="sidebar__brand">
           <Activity size={20} className="brand-icon" />
