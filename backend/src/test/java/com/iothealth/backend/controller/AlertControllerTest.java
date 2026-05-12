@@ -35,7 +35,7 @@ class AlertControllerTest {
         alertResponse = new AlertResponse(
                 1L, AlertType.HIGH_HEART_RATE, AlertSeverity.WARNING,
                 "Warning high heart rate detected: 115 bpm",
-                false, Instant.now(), null,
+                false, Instant.now(), null, null,
                 1L, "Sara El Amrani",
                 1L, "DEV-001", 1L
         );
@@ -104,7 +104,7 @@ class AlertControllerTest {
         AlertResponse resolved = new AlertResponse(
                 1L, AlertType.HIGH_HEART_RATE, AlertSeverity.WARNING,
                 "Warning high heart rate detected: 115 bpm",
-                true, alertResponse.createdAt(), Instant.now(),
+                true, alertResponse.createdAt(), Instant.now(), null,
                 1L, "Sara El Amrani",
                 1L, "DEV-001", 1L
         );
