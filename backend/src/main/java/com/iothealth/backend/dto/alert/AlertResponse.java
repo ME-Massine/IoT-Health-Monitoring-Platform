@@ -13,6 +13,7 @@ public record AlertResponse(
         boolean resolved,
         Instant createdAt,
         Instant resolvedAt,
+        Instant acknowledgedAt,
         Long patientId,
         String patientFullName,
         Long deviceId,

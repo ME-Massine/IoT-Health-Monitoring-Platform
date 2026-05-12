@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Users, SearchX } from "lucide-react";
+import { Search, Users, SearchX, UserPlus } from "lucide-react";
 import { usePatients } from "../hooks/usePatients";
 import { PatientCard } from "../components/dashboard/PatientCard";
 import { KpiStrip } from "../components/dashboard/KpiStrip";
 import { PatientCardSkeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PatientForm } from "../components/forms/PatientForm";
 import { getPatientStatus, STATUS_ORDER } from "../utils/vitalStatus";
 import { alertApi } from "../api/alertApi";
 import { deviceApi } from "../api/deviceApi";
@@ -12,9 +13,10 @@ import { deviceApi } from "../api/deviceApi";
 const FILTERS = ["all", "critical", "warning", "stable"];
 
 export function DashboardPage() {
-  const { patients, vitals, loading, error } = usePatients();
+  const { patients, vitals, loading, error, addPatient, updatePatient, removePatient } = usePatients();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [formPatient, setFormPatient] = useState(undefined); // undefined = closed, null = new, object = edit
   const [criticalCount, setCriticalCount] = useState(0);
   const [warningCount, setWarningCount] = useState(0);
   const [devicesOnline, setDevicesOnline] = useState(0);
@@ -103,10 +105,16 @@ export function DashboardPage() {
   return (
     <section className="dashboard">
       <div className="dashboard__header">
-        <h2 className="page-title">Patient Dashboard</h2>
-        <span className="dashboard__subtitle">
-          Live monitoring · {patients.length} patient{patients.length !== 1 ? "s" : ""}
-        </span>
+        <div>
+          <h2 className="page-title">Patient Dashboard</h2>
+          <span className="dashboard__subtitle">
+            Live monitoring · {patients.length} patient{patients.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <button className="btn btn--primary btn--icon" onClick={() => setFormPatient(null)}>
+          <UserPlus size={14} />
+          Add Patient
+        </button>
       </div>
 
       <KpiStrip
@@ -168,9 +176,25 @@ export function DashboardPage() {
               patient={patient}
               vitals={vitals[patient.id]}
               deviceStatus={deviceStatusMap[patient.id]}
+              onEdit={() => setFormPatient(patient)}
             />
           ))}
         </div>
+      )}
+
+      {formPatient !== undefined && (
+        <PatientForm
+          patient={formPatient}
+          onClose={() => setFormPatient(undefined)}
+          onSaved={(saved) => {
+            formPatient ? updatePatient(saved) : addPatient(saved);
+            setFormPatient(undefined);
+          }}
+          onDeleted={(id) => {
+            removePatient(id);
+            setFormPatient(undefined);
+          }}
+        />
       )}
     </section>
   );

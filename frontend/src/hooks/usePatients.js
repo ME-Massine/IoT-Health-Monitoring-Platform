@@ -65,5 +65,17 @@ export function usePatients() {
     return () => client.deactivate();
   }, []);
 
-  return { patients, vitals, loading, error };
+  function addPatient(p) {
+    setPatients((prev) => [...prev, p]);
+  }
+
+  function updatePatient(p) {
+    setPatients((prev) => prev.map((x) => (x.id === p.id ? p : x)));
+  }
+
+  function removePatient(id) {
+    setPatients((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  return { patients, vitals, loading, error, addPatient, updatePatient, removePatient };
 }

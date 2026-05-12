@@ -48,6 +48,9 @@ public class Alert {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
+    @Column(name = "acknowledged_at")
+    private Instant acknowledgedAt;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
@@ -69,6 +72,12 @@ public class Alert {
         if (!this.resolved) {
             this.resolved = true;
             this.resolvedAt = Instant.now();
+        }
+    }
+
+    public void acknowledge() {
+        if (this.acknowledgedAt == null) {
+            this.acknowledgedAt = Instant.now();
         }
     }
 }

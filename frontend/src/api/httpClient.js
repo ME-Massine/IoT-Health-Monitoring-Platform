@@ -9,3 +9,18 @@ export const httpClient = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    // Don't surface 404s as toasts — callers handle missing resources themselves
+    if (status && status !== 404) {
+      const message =
+        error.response?.data?.message ||
+        (status >= 500 ? "Server error. Please try again." : "Request failed.");
+      window.dispatchEvent(new CustomEvent("api-error", { detail: message }));
+    }
+    return Promise.reject(error);
+  }
+);

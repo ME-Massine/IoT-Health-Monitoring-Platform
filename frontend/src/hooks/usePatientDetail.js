@@ -6,7 +6,7 @@ import { deviceApi } from "../api/deviceApi";
 import { usePatientVitalsSocket } from "./usePatientVitalsSocket";
 import { usePatientAlertsSocket } from "./usePatientAlertsSocket";
 
-export function usePatientDetail(patientId) {
+export function usePatientDetail(patientId, rangeHours = null) {
   const [patient, setPatient] = useState(null);
   const [vitalsHistory, setVitalsHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -24,9 +24,13 @@ export function usePatientDetail(patientId) {
         setLoading(true);
         setError(null);
 
+        const historyParams = rangeHours
+          ? { limit: 500, from: new Date(Date.now() - rangeHours * 3600_000), to: new Date() }
+          : { limit: 20 };
+
         const [patientData, historyData, alertsData] = await Promise.all([
           patientApi.getById(patientId),
-          vitalSignApi.getHistoryByPatientId(patientId, 20),
+          vitalSignApi.getHistoryByPatientId(patientId, historyParams),
           alertApi.getByPatientId(patientId),
         ]);
 
@@ -55,11 +59,11 @@ export function usePatientDetail(patientId) {
 
     fetchAll();
     return () => { cancelled = true; };
-  }, [patientId]);
+  }, [patientId, rangeHours]);
 
-  // Prepend new vitals from WebSocket
+  // Prepend new vitals from WebSocket (cap at 500 to avoid unbounded growth)
   usePatientVitalsSocket(patientId, (vital) => {
-    setVitalsHistory((prev) => [vital, ...prev.slice(0, 19)]);
+    setVitalsHistory((prev) => [vital, ...prev.slice(0, 499)]);
   });
 
   // Prepend new alerts from WebSocket

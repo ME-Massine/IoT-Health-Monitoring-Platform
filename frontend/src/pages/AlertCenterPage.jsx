@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAlerts } from "../hooks/useAlerts";
 import { alertApi } from "../api/alertApi";
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, BellOff } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, BellOff, Eye, Trash2 } from "lucide-react";
 import { AlertRowSkeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { formatTimeAgo } from "../utils/time";
@@ -19,8 +19,10 @@ function formatType(type) {
 }
 
 export function AlertCenterPage() {
-  const { alerts, allAlerts, filter, setFilter, loading, error, handleAlertResolved } = useAlerts();
+  const { alerts, allAlerts, filter, setFilter, loading, error, handleAlertResolved, handleAlertUpdated, handleAlertDismissed } = useAlerts();
   const [resolvingId, setResolvingId] = useState(null);
+  const [acknowledgingId, setAcknowledgingId] = useState(null);
+  const [dismissingId, setDismissingId] = useState(null);
 
   async function handleResolve(alertId) {
     setResolvingId(alertId);
@@ -28,10 +30,28 @@ export function AlertCenterPage() {
       const updated = await alertApi.resolve(alertId);
       handleAlertResolved(updated);
       window.dispatchEvent(new CustomEvent("alert-resolved"));
-    } catch {
-      alert("Failed to resolve alert. Please try again.");
     } finally {
       setResolvingId(null);
+    }
+  }
+
+  async function handleAcknowledge(alertId) {
+    setAcknowledgingId(alertId);
+    try {
+      const updated = await alertApi.acknowledge(alertId);
+      handleAlertUpdated(updated);
+    } finally {
+      setAcknowledgingId(null);
+    }
+  }
+
+  async function handleDismiss(alertId) {
+    setDismissingId(alertId);
+    try {
+      await alertApi.dismiss(alertId);
+      handleAlertDismissed(alertId);
+    } finally {
+      setDismissingId(null);
     }
   }
 
@@ -138,18 +158,44 @@ export function AlertCenterPage() {
                       {a.patientFullName}
                     </Link>
                   )}
+                  {a.acknowledgedAt && !a.resolved && (
+                    <span className="acknowledged-tag">
+                      <Eye size={11} /> Acknowledged
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {!a.resolved && (
+              <div className="alert-row__actions">
+                {!a.resolved && !a.acknowledgedAt && (
+                  <button
+                    className="btn btn--acknowledge"
+                    onClick={() => handleAcknowledge(a.id)}
+                    disabled={acknowledgingId === a.id}
+                    title="Acknowledge"
+                  >
+                    <Eye size={13} />
+                    {acknowledgingId === a.id ? "…" : "Ack"}
+                  </button>
+                )}
+                {!a.resolved && (
+                  <button
+                    className="btn btn--resolve"
+                    onClick={() => handleResolve(a.id)}
+                    disabled={resolvingId === a.id}
+                  >
+                    {resolvingId === a.id ? "…" : "Resolve"}
+                  </button>
+                )}
                 <button
-                  className="btn btn--resolve"
-                  onClick={() => handleResolve(a.id)}
-                  disabled={resolvingId === a.id}
+                  className="btn btn--dismiss"
+                  onClick={() => handleDismiss(a.id)}
+                  disabled={dismissingId === a.id}
+                  title="Dismiss alert"
                 >
-                  {resolvingId === a.id ? "…" : "Resolve"}
+                  <Trash2 size={13} />
                 </button>
-              )}
+              </div>
             </div>
           ))}
         </div>

@@ -1,12 +1,15 @@
 package com.iothealth.backend.controller;
 
 import com.iothealth.backend.dto.alert.AlertResponse;
+import com.iothealth.backend.dto.alert.AlertSummaryPoint;
 import com.iothealth.backend.service.AlertService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -39,5 +42,26 @@ public class AlertController {
     @Operation(summary = "Resolve an alert by ID")
     public AlertResponse resolveAlert(@PathVariable Long id) {
         return alertService.resolveAlert(id);
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "Get hourly alert counts between two timestamps")
+    public List<AlertSummaryPoint> getAlertSummary(
+            @RequestParam Instant from,
+            @RequestParam Instant to) {
+        return alertService.getAlertSummary(from, to);
+    }
+
+    @PatchMapping("/{id}/acknowledge")
+    @Operation(summary = "Acknowledge an alert by ID")
+    public AlertResponse acknowledgeAlert(@PathVariable Long id) {
+        return alertService.acknowledgeAlert(id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Dismiss (delete) an alert by ID")
+    public void dismissAlert(@PathVariable Long id) {
+        alertService.dismissAlert(id);
     }
 }

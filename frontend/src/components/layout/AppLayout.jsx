@@ -44,6 +44,17 @@ export function AppLayout() {
   }, []);
 
   useEffect(() => {
+    function onApiError(e) {
+      setToasts((prev) => [
+        ...prev,
+        { id: Date.now(), severity: "ERROR", message: e.detail },
+      ]);
+    }
+    window.addEventListener("api-error", onApiError);
+    return () => window.removeEventListener("api-error", onApiError);
+  }, []);
+
+  useEffect(() => {
     function checkHealth() {
       fetch(HEALTH_URL)
         .then((r) => r.json())

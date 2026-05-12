@@ -26,4 +26,6 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
             Long patientId, AlertType type, Instant since);
 
     long countByResolvedFalse();
+
+    List<Alert> findByCreatedAtBetweenOrderByCreatedAtAsc(Instant from, Instant to);
 }

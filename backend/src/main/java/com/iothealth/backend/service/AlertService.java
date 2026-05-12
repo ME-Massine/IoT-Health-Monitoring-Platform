@@ -16,10 +16,15 @@ import com.iothealth.backend.exception.ResourceNotFoundException;
 import com.iothealth.backend.mapper.AlertMapper;
 import com.iothealth.backend.websocket.AlertWebSocketPublisher;
 
+import com.iothealth.backend.dto.alert.AlertSummaryPoint;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -206,12 +211,49 @@ public class AlertService {
     public AlertResponse resolveAlert(Long id) {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Alert not found with id: " + id));
-
         alert.resolve();
+        return AlertMapper.toResponse(alertRepository.save(alert));
+    }
 
-        Alert savedAlert = alertRepository.save(alert);
+    @Transactional
+    public AlertResponse acknowledgeAlert(Long id) {
+        Alert alert = alertRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Alert not found with id: " + id));
+        alert.acknowledge();
+        return AlertMapper.toResponse(alertRepository.save(alert));
+    }
 
-        return AlertMapper.toResponse(savedAlert);
+    @Transactional(readOnly = true)
+    public List<AlertSummaryPoint> getAlertSummary(Instant from, Instant to) {
+        List<Alert> alerts = alertRepository.findByCreatedAtBetweenOrderByCreatedAtAsc(from, to);
+
+        // Pre-populate every hour slot so the chart always has a full range
+        Map<Instant, long[]> buckets = new LinkedHashMap<>();
+        Instant cursor = from.truncatedTo(ChronoUnit.HOURS);
+        Instant end = to.truncatedTo(ChronoUnit.HOURS);
+        while (!cursor.isAfter(end)) {
+            buckets.put(cursor, new long[]{0, 0}); // [critical, warning]
+            cursor = cursor.plus(1, ChronoUnit.HOURS);
+        }
+
+        for (Alert a : alerts) {
+            Instant bucket = a.getCreatedAt().truncatedTo(ChronoUnit.HOURS);
+            long[] counts = buckets.computeIfAbsent(bucket, k -> new long[]{0, 0});
+            if (a.getSeverity() == AlertSeverity.CRITICAL) counts[0]++;
+            else counts[1]++;
+        }
+
+        return buckets.entrySet().stream()
+                .map(e -> new AlertSummaryPoint(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                .toList();
+    }
+
+    @Transactional
+    public void dismissAlert(Long id) {
+        if (!alertRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Alert not found with id: " + id);
+        }
+        alertRepository.deleteById(id);
     }
 
     private Alert buildAlert(

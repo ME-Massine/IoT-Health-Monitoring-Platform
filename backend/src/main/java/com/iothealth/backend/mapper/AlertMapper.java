@@ -24,6 +24,7 @@ public final class AlertMapper {
                 alert.isResolved(),
                 alert.getCreatedAt(),
                 alert.getResolvedAt(),
+                alert.getAcknowledgedAt(),
                 patient != null ? patient.getId() : null,
                 formatPatientFullName(patient),
                 device != null ? device.getId() : null,

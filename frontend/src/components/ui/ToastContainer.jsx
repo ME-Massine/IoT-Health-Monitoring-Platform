@@ -1,8 +1,13 @@
 import { useEffect } from "react";
-import { X, AlertCircle, AlertTriangle } from "lucide-react";
+import { X, AlertCircle, AlertTriangle, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const AUTO_DISMISS_MS = { CRITICAL: 8000, WARNING: 5000 };
+const AUTO_DISMISS_MS = { CRITICAL: 8000, WARNING: 5000, ERROR: 6000 };
+
+const ICON_MAP = {
+  CRITICAL: AlertCircle,
+  ERROR: XCircle,
+};
 
 export function ToastContainer({ toasts, onDismiss }) {
   if (toasts.length === 0) return null;
@@ -22,7 +27,7 @@ function Toast({ toast, onDismiss }) {
     return () => clearTimeout(timer);
   }, [toast.id, toast.severity, onDismiss]);
 
-  const Icon = toast.severity === "CRITICAL" ? AlertCircle : AlertTriangle;
+  const Icon = ICON_MAP[toast.severity] ?? AlertTriangle;
   const cls = toast.severity.toLowerCase();
 
   return (

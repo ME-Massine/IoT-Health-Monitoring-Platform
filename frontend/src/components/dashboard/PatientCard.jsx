@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Thermometer, Activity, Wrench, Clock, ChevronRight } from "lucide-react";
+import { Heart, Thermometer, Activity, Wrench, Clock, ChevronRight, Pencil } from "lucide-react";
 import {
   getPatientStatus,
   getHeartRateStatus,
@@ -18,7 +18,7 @@ const STATUS_LABEL = {
 
 const STALE_AFTER_MS = 2 * 60 * 1000;
 
-export function PatientCard({ patient, vitals, deviceStatus }) {
+export function PatientCard({ patient, vitals, deviceStatus, onEdit }) {
   const navigate = useNavigate();
   const [now, setNow] = useState(Date.now());
   const [pulse, setPulse] = useState(false);
@@ -76,16 +76,27 @@ export function PatientCard({ patient, vitals, deviceStatus }) {
     >
       <div className="patient-card__header">
         <span className="patient-card__name">{fullName}</span>
-        {isOffline ? (
-          <span className="status-badge status-badge--offline">
-            <Wrench size={11} />
-            {deviceStatus === "MAINTENANCE" ? "MAINTENANCE" : "OFFLINE"}
-          </span>
-        ) : (
-          <span className={`status-badge status-badge--${status}`}>
-            {STATUS_LABEL[status]}
-          </span>
-        )}
+        <div className="patient-card__header-right">
+          {isOffline ? (
+            <span className="status-badge status-badge--offline">
+              <Wrench size={11} />
+              {deviceStatus === "MAINTENANCE" ? "MAINTENANCE" : "OFFLINE"}
+            </span>
+          ) : (
+            <span className={`status-badge status-badge--${status}`}>
+              {STATUS_LABEL[status]}
+            </span>
+          )}
+          {onEdit && (
+            <button
+              className="patient-card__edit-btn"
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              aria-label={`Edit ${fullName}`}
+            >
+              <Pencil size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="patient-card__room">Room {patient.roomNumber}</div>

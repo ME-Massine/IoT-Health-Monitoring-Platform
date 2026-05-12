@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
 import { Wrench } from "lucide-react";
 import { usePatientDetail } from "../hooks/usePatientDetail";
 import { VitalCard } from "../components/detail/VitalCard";
@@ -34,10 +35,18 @@ const STATUS_LABEL = {
   unknown: "NO DATA",
 };
 
+const RANGE_OPTIONS = [
+  { label: "Live", hours: null },
+  { label: "1h",   hours: 1  },
+  { label: "6h",   hours: 6  },
+  { label: "24h",  hours: 24 },
+];
+
 export function PatientDetailPage() {
   const { patientId } = useParams();
+  const [rangeHours, setRangeHours] = useState(null);
   const { patient, vitalsHistory, alerts, device, maintenanceWindows, loading, error, handleAlertResolved } =
-    usePatientDetail(patientId);
+    usePatientDetail(patientId, rangeHours);
 
   if (loading) return <PatientDetailSkeleton />;
 
@@ -54,6 +63,7 @@ export function PatientDetailPage() {
 
   const fullName = `${patient.firstName} ${patient.lastName}`;
   const latest = vitalsHistory[0] ?? null;
+  const previous = vitalsHistory[1] ?? null;
   const status = getPatientStatus(latest);
   const unresolvedCount = alerts.filter((a) => !a.resolved).length;
 
@@ -89,24 +99,40 @@ export function PatientDetailPage() {
           value={latest?.heartRate}
           unit="bpm"
           status={getHeartRateStatus(latest?.heartRate)}
+          delta={previous?.heartRate}
         />
         <VitalCard
           label="Temperature"
-          value={latest?.temperature}
+          value={latest?.temperature != null ? parseFloat(latest.temperature) : null}
           unit="°C"
           status={getTemperatureStatus(latest?.temperature)}
+          delta={previous?.temperature != null ? parseFloat(previous.temperature) : null}
         />
         <VitalCard
           label="SpO2"
           value={latest?.spo2}
           unit="%"
           status={getSpo2Status(latest?.spo2)}
+          delta={previous?.spo2}
         />
       </div>
 
       <div className="patient-detail__body">
         <div className="patient-detail__charts">
-          <h3 className="section-title">Vital Trends</h3>
+          <div className="section-title-row">
+            <h3 className="section-title">Vital Trends</h3>
+            <div className="range-picker">
+              {RANGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  className={`range-btn ${rangeHours === opt.hours ? "range-btn--active" : ""}`}
+                  onClick={() => setRangeHours(opt.hours)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="chart-block">
             <div className="chart-block__label">Heart Rate (bpm)</div>

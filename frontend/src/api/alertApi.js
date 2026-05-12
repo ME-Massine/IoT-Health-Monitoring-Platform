@@ -12,4 +12,15 @@ export const alertApi = {
 
   resolve: (alertId) =>
     httpClient.put(`/alerts/${alertId}/resolve`).then((res) => res.data),
+
+  acknowledge: (alertId) =>
+    httpClient.patch(`/alerts/${alertId}/acknowledge`).then((res) => res.data),
+
+  dismiss: (alertId) =>
+    httpClient.delete(`/alerts/${alertId}`),
+
+  getSummary: (from, to) =>
+    httpClient
+      .get("/alerts/summary", { params: { from: from.toISOString(), to: to.toISOString() } })
+      .then((res) => res.data),
 };

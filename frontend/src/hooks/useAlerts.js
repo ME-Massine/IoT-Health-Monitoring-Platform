@@ -42,10 +42,18 @@ export function useAlerts() {
     }
   });
 
-  function handleAlertResolved(updatedAlert) {
+  function handleAlertUpdated(updatedAlert) {
     setAllAlerts((prev) =>
       prev.map((a) => (a.id === updatedAlert.id ? updatedAlert : a))
     );
+  }
+
+  function handleAlertResolved(updatedAlert) {
+    handleAlertUpdated(updatedAlert);
+  }
+
+  function handleAlertDismissed(alertId) {
+    setAllAlerts((prev) => prev.filter((a) => a.id !== alertId));
   }
 
   // Client-side filter for severity-specific views
@@ -57,5 +65,5 @@ export function useAlerts() {
     return allAlerts;
   })();
 
-  return { alerts, allAlerts, filter, setFilter, loading, error, handleAlertResolved };
+  return { alerts, allAlerts, filter, setFilter, loading, error, handleAlertResolved, handleAlertUpdated, handleAlertDismissed };
 }
