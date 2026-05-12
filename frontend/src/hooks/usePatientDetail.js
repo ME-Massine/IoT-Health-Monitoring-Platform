@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { patientApi } from "../api/patientApi";
 import { vitalSignApi } from "../api/vitalSignApi";
 import { alertApi } from "../api/alertApi";
+import { deviceApi } from "../api/deviceApi";
 import { usePatientVitalsSocket } from "./usePatientVitalsSocket";
 import { usePatientAlertsSocket } from "./usePatientAlertsSocket";
 
@@ -9,6 +10,8 @@ export function usePatientDetail(patientId) {
   const [patient, setPatient] = useState(null);
   const [vitalsHistory, setVitalsHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [device, setDevice] = useState(null);
+  const [maintenanceWindows, setMaintenanceWindows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -31,6 +34,18 @@ export function usePatientDetail(patientId) {
         setPatient(patientData);
         setVitalsHistory(historyData);
         setAlerts(alertsData);
+
+        // Fetch device + maintenance windows independently (non-blocking)
+        deviceApi.getByPatientId(patientId)
+          .then((dev) => {
+            if (cancelled) return;
+            setDevice(dev);
+            return deviceApi.getMaintenanceWindows(dev.id);
+          })
+          .then((windows) => {
+            if (!cancelled && windows) setMaintenanceWindows(windows);
+          })
+          .catch(() => {});
       } catch {
         if (!cancelled) setError("Failed to load patient data.");
       } finally {
@@ -61,5 +76,5 @@ export function usePatientDetail(patientId) {
     );
   }
 
-  return { patient, vitalsHistory, alerts, loading, error, handleAlertResolved };
+  return { patient, vitalsHistory, alerts, device, maintenanceWindows, loading, error, handleAlertResolved };
 }

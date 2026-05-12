@@ -351,6 +351,20 @@ p { margin: 0; }
 .vital-chip--critical { background: #fef2f2; color: #b91c1c; }
 .vital-chip--unknown  { background: #f1f5f9; color: #94a3b8; }
 
+.stale-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  padding: 3px 7px;
+  border-radius: 5px;
+  font-weight: 500;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  margin-left: auto;
+}
+
 .patient-card__link {
   align-self: flex-end;
   font-size: 0.8rem;
@@ -518,6 +532,30 @@ p { margin: 0; }
 .tl-card__message { font-size: 0.82rem; color: #475569; margin-bottom: 0.4rem; }
 .tl-card__footer { display: flex; justify-content: flex-end; }
 
+.tl-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #e2e8f0;
+}
+.tl-page-btn {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tl-page-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+.tl-page-btn:disabled { opacity: 0.35; cursor: default; }
+.tl-page-info { font-size: 0.78rem; color: #64748b; min-width: 3rem; text-align: center; }
+
 /* ── Alert Center ─────────────────────────────────────── */
 .alert-center { }
 
@@ -600,3 +638,146 @@ p { margin: 0; }
 .alert-row__time { }
 .alert-row__patient-link { color: #2563eb; }
 .alert-row__patient-link:hover { text-decoration: underline; }
+
+/* ── Status badge — offline/maintenance variant ───────── */
+.status-badge--offline {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.device-offline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+/* ── Devices Page ─────────────────────────────────────── */
+.devices-page { }
+
+.devices-kpi-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.devices-kpi {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  border-left-width: 3px;
+}
+.devices-kpi--active      { border-left-color: #16a34a; color: #15803d; }
+.devices-kpi--maintenance { border-left-color: #d97706; color: #b45309; }
+.devices-kpi--inactive    { border-left-color: #94a3b8; color: #64748b; }
+.devices-kpi__count { font-weight: 700; font-size: 1.1rem; }
+.devices-kpi__label { color: #64748b; font-size: 0.78rem; }
+
+.devices-table-wrap {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.devices-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.devices-table thead tr {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.devices-table th {
+  text-align: left;
+  padding: 0.65rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.devices-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.devices-table__row:last-child td { border-bottom: none; }
+.devices-table__row:hover td { background: #fafafa; }
+
+.devices-table__row--maintenance td { background: #fffbeb; }
+.devices-table__row--maintenance:hover td { background: #fef9c3; }
+
+.devices-table__row--inactive td { background: #f8fafc; color: #94a3b8; }
+.devices-table__row--inactive:hover td { background: #f1f5f9; }
+
+.devices-table__code {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+.devices-table__icon { color: #64748b; flex-shrink: 0; }
+
+.devices-table__patient-link { color: #2563eb; }
+.devices-table__patient-link:hover { text-decoration: underline; }
+
+.devices-table__time { font-size: 0.78rem; color: #94a3b8; }
+
+.devices-table__toggle-btn {
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn--maintenance {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fcd34d;
+}
+.btn--maintenance:hover:not(:disabled) { background: #fef9c3; }
+
+.btn--activate {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #86efac;
+}
+.btn--activate:hover:not(:disabled) { background: #dcfce7; }
+
+.devices-table__toggle-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Device status badges */
+.device-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.device-status--active      { background: #f0fdf4; color: #15803d; }
+.device-status--maintenance { background: #fffbeb; color: #b45309; }
+.device-status--inactive    { background: #f1f5f9; color: #64748b; }

@@ -3,6 +3,7 @@ package com.iothealth.backend.service;
 import com.iothealth.backend.dto.vitalsign.VitalSignRequest;
 import com.iothealth.backend.dto.vitalsign.VitalSignResponse;
 import com.iothealth.backend.entity.Device;
+import com.iothealth.backend.entity.DeviceStatus;
 import com.iothealth.backend.entity.VitalSign;
 import com.iothealth.backend.exception.BadRequestException;
 import com.iothealth.backend.exception.ResourceNotFoundException;
@@ -34,6 +35,12 @@ public class VitalSignService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Device not found with code: " + request.deviceCode()
                 ));
+
+        if (device.getStatus() != DeviceStatus.ACTIVE) {
+            throw new BadRequestException(
+                    "Device " + device.getDeviceCode() + " is currently " + device.getStatus() + " and cannot accept readings"
+            );
+        }
 
         VitalSign vitalSign = VitalSignMapper.toEntity(request, device);
         VitalSign savedVitalSign = vitalSignRepository.save(vitalSign);

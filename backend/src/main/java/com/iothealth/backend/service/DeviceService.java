@@ -1,17 +1,22 @@
 package com.iothealth.backend.service;
 
+import com.iothealth.backend.dto.device.DeviceMaintenanceResponse;
 import com.iothealth.backend.dto.device.DeviceRequest;
 import com.iothealth.backend.dto.device.DeviceResponse;
 import com.iothealth.backend.entity.Device;
+import com.iothealth.backend.entity.DeviceMaintenance;
+import com.iothealth.backend.entity.DeviceStatus;
 import com.iothealth.backend.entity.Patient;
 import com.iothealth.backend.exception.BadRequestException;
 import com.iothealth.backend.exception.ResourceNotFoundException;
 import com.iothealth.backend.mapper.DeviceMapper;
+import com.iothealth.backend.repository.DeviceMaintenanceRepository;
 import com.iothealth.backend.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -20,6 +25,7 @@ import java.util.List;
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
+    private final DeviceMaintenanceRepository maintenanceRepository;
     private final PatientService patientService;
 
     public DeviceResponse createDevice(DeviceRequest request) {
@@ -86,6 +92,48 @@ public class DeviceService {
     public void deleteDevice(Long id) {
         Device device = findDeviceEntityById(id);
         deviceRepository.delete(device);
+    }
+
+    public DeviceResponse setDeviceStatus(Long id, DeviceStatus newStatus) {
+        Device device = findDeviceEntityById(id);
+        DeviceStatus oldStatus = device.getStatus();
+
+        if (oldStatus == newStatus) {
+            throw new BadRequestException("Device is already in status: " + newStatus);
+        }
+
+        if (newStatus == DeviceStatus.MAINTENANCE) {
+            DeviceMaintenance window = DeviceMaintenance.builder()
+                    .device(device)
+                    .startedAt(Instant.now())
+                    .build();
+            maintenanceRepository.save(window);
+        } else if (oldStatus == DeviceStatus.MAINTENANCE) {
+            maintenanceRepository.findFirstByDeviceIdAndEndedAtIsNull(id)
+                    .ifPresent(w -> {
+                        w.setEndedAt(Instant.now());
+                        maintenanceRepository.save(w);
+                    });
+        }
+
+        device.setStatus(newStatus);
+        return DeviceMapper.toResponse(deviceRepository.save(device));
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeviceMaintenanceResponse> getMaintenanceWindows(Long id) {
+        findDeviceEntityById(id);
+        return maintenanceRepository.findByDeviceIdOrderByStartedAtDesc(id)
+                .stream()
+                .map(w -> new DeviceMaintenanceResponse(
+                        w.getId(),
+                        w.getDevice().getId(),
+                        w.getDevice().getDeviceCode(),
+                        w.getStartedAt(),
+                        w.getEndedAt(),
+                        w.getReason()
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)

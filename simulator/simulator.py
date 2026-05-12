@@ -14,7 +14,8 @@ DEVICE_CODES_RAW  = os.getenv("DEVICE_CODES", os.getenv("DEVICE_CODE", "DEV-001"
 INTERVAL_SECONDS  = int(os.getenv("INTERVAL_SECONDS", "5"))
 ANOMALY_RATE      = float(os.getenv("ANOMALY_RATE", "0.10"))
 
-VITALS_ENDPOINT   = f"{API_BASE_URL}/vitals"
+VITALS_ENDPOINT        = f"{API_BASE_URL}/vitals"
+DEVICE_LOOKUP_ENDPOINT = f"{API_BASE_URL}/devices/code"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -161,8 +162,15 @@ def send_vital_signs(payload: dict, label: str) -> bool:
     except requests.exceptions.Timeout:
         log.error("[%s] Request timed out after 5s", payload["deviceCode"])
     except requests.exceptions.HTTPError as e:
-        log.error("[%s] HTTP %s — %s",
-                  payload["deviceCode"], e.response.status_code, e.response.text)
+        body = e.response.text
+        if e.response.status_code == 400 and "cannot accept readings" in body:
+            # Device is MAINTENANCE or INACTIVE — not an error, just skip quietly
+            status_word = "MAINTENANCE" if "MAINTENANCE" in body else "INACTIVE"
+            log.info("%-22s | device=%-10s skipped — device is %s",
+                     "SKIPPED", payload["deviceCode"], status_word)
+        else:
+            log.error("[%s] HTTP %s — %s",
+                      payload["deviceCode"], e.response.status_code, body)
     return False
 
 
@@ -171,22 +179,21 @@ def send_vital_signs(payload: dict, label: str) -> bool:
 # ---------------------------------------------------------------------------
 def validate_device(device_code: str) -> bool:
     """
-    Send a single test reading to check if the device code is accepted.
-    Returns True if the backend accepts it, False otherwise.
+    Verify the device code exists in the backend using a GET lookup.
+    Accepts devices in any status — MAINTENANCE/INACTIVE are handled gracefully
+    at send time, not filtered out at startup.
     """
-    test_payload = {
-        "deviceCode":  device_code,
-        "heartRate":   72,
-        "temperature": 36.6,
-        "spo2":        98,
-        "recordedAt":  datetime.now(timezone.utc).isoformat(),
-    }
     try:
-        response = requests.post(VITALS_ENDPOINT, json=test_payload, timeout=5)
-        if response.status_code == 201:
+        response = requests.get(f"{DEVICE_LOOKUP_ENDPOINT}/{device_code}", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            status = data.get("status", "UNKNOWN")
+            if status != "ACTIVE":
+                log.warning("  ✓ %s — found (status: %s, readings will be skipped until ACTIVE)",
+                            device_code, status)
             return True
         log.error(
-            "Device '%s' rejected by backend — HTTP %s: %s",
+            "Device '%s' not found in backend — HTTP %s: %s",
             device_code, response.status_code, response.text,
         )
         return False
@@ -219,10 +226,9 @@ def run():
 
     for code in device_codes:
         if validate_device(code):
-            log.info("  ✓ %s — accepted", code)
             valid_states.append(VitalState(code))
         else:
-            log.warning("  ✗ %s — skipping this device", code)
+            log.warning("  ✗ %s — not found in backend, skipping", code)
 
     if not valid_states:
         log.error("No valid devices found. Check your DEVICE_CODES and ensure "

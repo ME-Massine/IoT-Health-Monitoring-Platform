@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { Wrench } from "lucide-react";
 import { usePatientDetail } from "../hooks/usePatientDetail";
 import { VitalCard } from "../components/detail/VitalCard";
 import { VitalChart } from "../components/detail/VitalChart";
@@ -34,7 +35,7 @@ const STATUS_LABEL = {
 
 export function PatientDetailPage() {
   const { patientId } = useParams();
-  const { patient, vitalsHistory, alerts, loading, error, handleAlertResolved } =
+  const { patient, vitalsHistory, alerts, device, maintenanceWindows, loading, error, handleAlertResolved } =
     usePatientDetail(patientId);
 
   if (loading) {
@@ -71,9 +72,15 @@ export function PatientDetailPage() {
         <div className="patient-detail__title-row">
           <h2 className="patient-detail__name">{fullName}</h2>
           <span className="patient-detail__room-tag">Room {patient.roomNumber}</span>
-          <span className={`status-badge status-badge--${status}`}>
-            {STATUS_LABEL[status]}
-          </span>
+          {device && device.status !== "ACTIVE" ? (
+            <span className="status-badge status-badge--offline">
+              <Wrench size={11} /> {device.status}
+            </span>
+          ) : (
+            <span className={`status-badge status-badge--${status}`}>
+              {STATUS_LABEL[status]}
+            </span>
+          )}
         </div>
         <div className="patient-detail__meta">
           {patient.age} yrs · {patient.gender}
@@ -114,6 +121,7 @@ export function PatientDetailPage() {
               color="#ef4444"
               refLines={HR_REFS}
               yDomain={["auto", "auto"]}
+              maintenanceWindows={maintenanceWindows}
             />
           </div>
 
@@ -125,6 +133,7 @@ export function PatientDetailPage() {
               color="#f97316"
               refLines={TEMP_REFS}
               yDomain={[34, 40]}
+              maintenanceWindows={maintenanceWindows}
             />
           </div>
 
@@ -136,6 +145,7 @@ export function PatientDetailPage() {
               color="#3b82f6"
               refLines={SPO2_REFS}
               yDomain={[85, 100]}
+              maintenanceWindows={maintenanceWindows}
             />
           </div>
         </div>

@@ -14,6 +14,7 @@ export function DashboardPage() {
   const [criticalCount, setCriticalCount] = useState(0);
   const [warningCount, setWarningCount] = useState(0);
   const [devicesOnline, setDevicesOnline] = useState(0);
+  const [deviceStatusMap, setDeviceStatusMap] = useState({});
 
   useEffect(() => {
     alertApi.getUnresolved().then((alerts) => {
@@ -23,7 +24,21 @@ export function DashboardPage() {
 
     deviceApi.getAll().then((devices) => {
       setDevicesOnline(devices.filter((d) => d.status === "ACTIVE").length);
+      const map = {};
+      devices.forEach((d) => { if (d.patientId) map[d.patientId] = d.status; });
+      setDeviceStatusMap(map);
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function onDeviceStatusChanged(e) {
+      const device = e.detail;
+      if (device.patientId != null) {
+        setDeviceStatusMap((prev) => ({ ...prev, [device.patientId]: device.status }));
+      }
+    }
+    window.addEventListener("device-status-changed", onDeviceStatusChanged);
+    return () => window.removeEventListener("device-status-changed", onDeviceStatusChanged);
   }, []);
 
   if (loading) {
@@ -92,6 +107,7 @@ export function DashboardPage() {
               key={patient.id}
               patient={patient}
               vitals={vitals[patient.id]}
+              deviceStatus={deviceStatusMap[patient.id]}
             />
           ))}
         </div>

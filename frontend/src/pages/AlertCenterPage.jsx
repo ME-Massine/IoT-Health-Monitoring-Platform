@@ -33,6 +33,7 @@ export function AlertCenterPage() {
     try {
       const updated = await alertApi.resolve(alertId);
       handleAlertResolved(updated);
+      window.dispatchEvent(new CustomEvent("alert-resolved"));
     } catch {
       alert("Failed to resolve alert. Please try again.");
     } finally {

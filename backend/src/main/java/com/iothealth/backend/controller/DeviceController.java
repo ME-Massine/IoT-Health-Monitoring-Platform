@@ -1,7 +1,9 @@
 package com.iothealth.backend.controller;
 
+import com.iothealth.backend.dto.device.DeviceMaintenanceResponse;
 import com.iothealth.backend.dto.device.DeviceRequest;
 import com.iothealth.backend.dto.device.DeviceResponse;
+import com.iothealth.backend.dto.device.DeviceStatusRequest;
 import com.iothealth.backend.service.DeviceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -65,5 +67,20 @@ public class DeviceController {
     @Operation(summary = "Delete a device")
     public void deleteDevice(@PathVariable Long id) {
         deviceService.deleteDevice(id);
+    }
+
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Set device status (ACTIVE, INACTIVE, MAINTENANCE)")
+    public DeviceResponse setDeviceStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody DeviceStatusRequest request
+    ) {
+        return deviceService.setDeviceStatus(id, request.status());
+    }
+
+    @GetMapping("/{id}/maintenance-windows")
+    @Operation(summary = "Get all maintenance windows for a device")
+    public List<DeviceMaintenanceResponse> getMaintenanceWindows(@PathVariable Long id) {
+        return deviceService.getMaintenanceWindows(id);
     }
 }

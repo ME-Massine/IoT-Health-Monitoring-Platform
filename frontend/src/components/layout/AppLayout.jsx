@@ -1,27 +1,45 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, LayoutDashboard, Bell } from "lucide-react";
+import { Activity, LayoutDashboard, Bell, Cpu } from "lucide-react";
 import { alertApi } from "../../api/alertApi";
+import { useGlobalAlertsSocket } from "../../hooks/useGlobalAlertsSocket";
 
 export function AppLayout() {
   const [unresolvedCount, setUnresolvedCount] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  useEffect(() => {
-    function fetchCount() {
-      alertApi
-        .getUnresolved()
-        .then((alerts) => {
-          setUnresolvedCount(alerts.length);
-          setLastUpdate(new Date());
-        })
-        .catch(() => {});
-    }
-
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
+  const refreshCount = useCallback(() => {
+    alertApi
+      .getUnresolved()
+      .then((alerts) => {
+        setUnresolvedCount(alerts.length);
+        setLastUpdate(new Date());
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    refreshCount();
+    const interval = setInterval(refreshCount, 30000);
+    return () => clearInterval(interval);
+  }, [refreshCount]);
+
+  useEffect(() => {
+    function onResolved() {
+      setUnresolvedCount((prev) => Math.max(0, prev - 1));
+      setLastUpdate(new Date());
+    }
+    window.addEventListener("alert-resolved", onResolved);
+    return () => window.removeEventListener("alert-resolved", onResolved);
+  }, []);
+
+  // Increment badge immediately when a new alert arrives via WebSocket
+  useGlobalAlertsSocket((incoming) => {
+    if (!incoming.resolved) {
+      setUnresolvedCount((prev) => prev + 1);
+      setLastUpdate(new Date());
+    }
+  });
 
   return (
     <div className="app-shell">
@@ -49,6 +67,13 @@ export function AppLayout() {
             {unresolvedCount > 0 && (
               <span className="nav-badge">{unresolvedCount}</span>
             )}
+          </NavLink>
+          <NavLink
+            to="/devices"
+            className={({ isActive }) => `nav-link ${isActive ? "nav-link--active" : ""}`}
+          >
+            <Cpu size={15} />
+            Devices
           </NavLink>
         </nav>
 

@@ -5,6 +5,7 @@ import com.iothealth.backend.entity.AlertSeverity;
 import com.iothealth.backend.entity.AlertType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface AlertRepository extends JpaRepository<Alert, Long> {
@@ -20,4 +21,7 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findByTypeOrderByCreatedAtDesc(AlertType type);
 
     List<Alert> findByVitalSignIdOrderByCreatedAtDesc(Long vitalSignId);
+
+    boolean existsByPatientIdAndTypeAndResolvedFalseAndCreatedAtAfter(
+            Long patientId, AlertType type, Instant since);
 }

@@ -21,8 +21,11 @@ function SeverityIcon({ severity }) {
   return <AlertTriangle size={15} className="tl-icon tl-icon--warning" />;
 }
 
+const PAGE_SIZE = 4;
+
 export function PatientAlerts({ alerts, onAlertResolved }) {
   const [resolvingId, setResolvingId] = useState(null);
+  const [page, setPage] = useState(0);
 
   async function handleResolve(alertId) {
     setResolvingId(alertId);
@@ -40,16 +43,20 @@ export function PatientAlerts({ alerts, onAlertResolved }) {
     return <p className="no-data">No alerts for this patient.</p>;
   }
 
+  const totalPages = Math.ceil(alerts.length / PAGE_SIZE);
+  const safePage = Math.min(page, totalPages - 1);
+  const pageAlerts = alerts.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
   return (
     <div className="alert-timeline">
-      {alerts.map((a, i) => (
+      {pageAlerts.map((a, i) => (
         <div
           key={a.id}
           className={`tl-item ${a.resolved ? "tl-item--resolved" : ""}`}
         >
           <div className="tl-item__track">
             <SeverityIcon severity={a.severity} />
-            {i < alerts.length - 1 && <div className="tl-line" />}
+            {i < pageAlerts.length - 1 && <div className="tl-line" />}
           </div>
 
           <div className={`tl-card tl-card--${a.severity.toLowerCase()}`}>
@@ -83,6 +90,26 @@ export function PatientAlerts({ alerts, onAlertResolved }) {
           </div>
         </div>
       ))}
+
+      {totalPages > 1 && (
+        <div className="tl-pagination">
+          <button
+            className="tl-page-btn"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+          >
+            ← Prev
+          </button>
+          <span className="tl-page-info">{safePage + 1} / {totalPages}</span>
+          <button
+            className="tl-page-btn"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage === totalPages - 1}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

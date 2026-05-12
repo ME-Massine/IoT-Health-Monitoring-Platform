@@ -17,6 +17,7 @@ import com.iothealth.backend.mapper.AlertMapper;
 import com.iothealth.backend.websocket.AlertWebSocketPublisher;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +36,8 @@ public class AlertService {
 
     private static final int LOW_SPO2_WARNING = 94;
     private static final int LOW_SPO2_CRITICAL = 92;
+
+    private static final long COOLDOWN_MINUTES = 5;
 
     private final AlertRepository alertRepository;
     private final AlertWebSocketPublisher alertWebSocketPublisher;
@@ -74,26 +77,32 @@ public class AlertService {
         }
 
         if (heartRate < LOW_HEART_RATE_CRITICAL) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.LOW_HEART_RATE,
-                    AlertSeverity.CRITICAL,
-                    "Critical low heart rate detected: " + heartRate + " bpm"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.LOW_HEART_RATE)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.LOW_HEART_RATE,
+                        AlertSeverity.CRITICAL,
+                        "Critical low heart rate detected: " + heartRate + " bpm"
+                ));
+            }
         } else if (heartRate > HIGH_HEART_RATE_CRITICAL) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.HIGH_HEART_RATE,
-                    AlertSeverity.CRITICAL,
-                    "Critical high heart rate detected: " + heartRate + " bpm"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.HIGH_HEART_RATE)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.HIGH_HEART_RATE,
+                        AlertSeverity.CRITICAL,
+                        "Critical high heart rate detected: " + heartRate + " bpm"
+                ));
+            }
         } else if (heartRate >= HIGH_HEART_RATE_WARNING) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.HIGH_HEART_RATE,
-                    AlertSeverity.WARNING,
-                    "Warning high heart rate detected: " + heartRate + " bpm"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.HIGH_HEART_RATE)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.HIGH_HEART_RATE,
+                        AlertSeverity.WARNING,
+                        "Warning high heart rate detected: " + heartRate + " bpm"
+                ));
+            }
         }
     }
 
@@ -105,26 +114,32 @@ public class AlertService {
         }
 
         if (temperature.compareTo(LOW_TEMPERATURE_CRITICAL) < 0) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.LOW_TEMPERATURE,
-                    AlertSeverity.CRITICAL,
-                    "Critical low temperature detected: " + temperature + " °C"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.LOW_TEMPERATURE)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.LOW_TEMPERATURE,
+                        AlertSeverity.CRITICAL,
+                        "Critical low temperature detected: " + temperature + " °C"
+                ));
+            }
         } else if (temperature.compareTo(HIGH_TEMPERATURE_CRITICAL) > 0) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.HIGH_TEMPERATURE,
-                    AlertSeverity.CRITICAL,
-                    "Critical high temperature detected: " + temperature + " °C"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.HIGH_TEMPERATURE)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.HIGH_TEMPERATURE,
+                        AlertSeverity.CRITICAL,
+                        "Critical high temperature detected: " + temperature + " °C"
+                ));
+            }
         } else if (temperature.compareTo(HIGH_TEMPERATURE_WARNING) >= 0) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.HIGH_TEMPERATURE,
-                    AlertSeverity.WARNING,
-                    "Warning high temperature detected: " + temperature + " °C"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.HIGH_TEMPERATURE)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.HIGH_TEMPERATURE,
+                        AlertSeverity.WARNING,
+                        "Warning high temperature detected: " + temperature + " °C"
+                ));
+            }
         }
     }
 
@@ -136,20 +151,31 @@ public class AlertService {
         }
 
         if (spo2 <= LOW_SPO2_CRITICAL) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.LOW_SPO2,
-                    AlertSeverity.CRITICAL,
-                    "Critical low SpO2 detected: " + spo2 + "%"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.LOW_SPO2)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.LOW_SPO2,
+                        AlertSeverity.CRITICAL,
+                        "Critical low SpO2 detected: " + spo2 + "%"
+                ));
+            }
         } else if (spo2 <= LOW_SPO2_WARNING) {
-            alerts.add(buildAlert(
-                    vitalSign,
-                    AlertType.LOW_SPO2,
-                    AlertSeverity.WARNING,
-                    "Warning low SpO2 detected: " + spo2 + "%"
-            ));
+            if (!isSuppressed(vitalSign, AlertType.LOW_SPO2)) {
+                alerts.add(buildAlert(
+                        vitalSign,
+                        AlertType.LOW_SPO2,
+                        AlertSeverity.WARNING,
+                        "Warning low SpO2 detected: " + spo2 + "%"
+                ));
+            }
         }
+    }
+
+    private boolean isSuppressed(VitalSign vitalSign, AlertType type) {
+        Instant cutoff = Instant.now().minusSeconds(COOLDOWN_MINUTES * 60);
+        return alertRepository.existsByPatientIdAndTypeAndResolvedFalseAndCreatedAtAfter(
+                vitalSign.getPatient().getId(), type, cutoff
+        );
     }
 
     @Transactional(readOnly = true)
